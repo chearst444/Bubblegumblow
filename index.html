@@ -132,7 +132,7 @@
     </div>
     <div class="touch-controls">
         <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
-        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 HOLD TO BLOW</button>
+        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 TAP TO BLOW</button>
         <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
     </div>
 </div>
@@ -203,12 +203,12 @@ const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 const MAX_BUBBLE_STAGE = 4;
 // Target speeds only - vy eases toward these (see updatePhysics) rather
 // than snapping to them, and early stages barely lift at all so the
-// character doesn't take off the instant the button is pressed. Real
-// float only shows up once the bubble is nearly/fully inflated.
-const bubbleLift = [0, -0.2, -0.5, -0.9, -1.5];
+// character doesn't take off the instant the button is pressed. Stage 4's
+// target is 0: once fully inflated he settles into a stable hover rather
+// than continuing to climb - that's what actually reads as "floating"
+// instead of "still rising."
+const bubbleLift = [0, -0.2, -0.5, -0.9, 0];
 const BUBBLE_EASING = 0.06; // lower = softer, more gradual float
-const INFLATE_TICK_MS = 250; // time to grow one stage while the button is held
-const OVER_INFLATE_GRACE_TICKS = 1; // extra ticks allowed at max size before it bursts
 
 // Game State
 let currentLevel = 1;
@@ -223,7 +223,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        if (!keys.space) triggerBubbleInflation();
+        if (!keys.space) tapBlow(); // fire once per press, not per repeat-fired keydown
         keys.space = true;
     }
 });
@@ -231,34 +231,31 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        keys.space = false;
-        popBubble();
-    }
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.space = false;
 });
 
 // On-screen touch controls (phones/tablets have no keyboard) - these
-// drive the exact same `keys` flags and blow functions as the keyboard
+// drive the exact same `keys` flags and blow function as the keyboard
 // handlers above, so all the physics/animation logic only has to exist
 // once. Pointer events cover touch, mouse, and stylus in one handler.
-function bindHoldButton(el, onDown, onUp) {
+function bindButton(el, onDown, onUp) {
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
     el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
     el.addEventListener('pointerleave', onUp);
     el.addEventListener('pointercancel', onUp);
 }
 
-bindHoldButton(document.getElementById('btnLeft'),
+bindButton(document.getElementById('btnLeft'),
     () => { keys.left = true; },
     () => { keys.left = false; });
 
-bindHoldButton(document.getElementById('btnRight'),
+bindButton(document.getElementById('btnRight'),
     () => { keys.right = true; },
     () => { keys.right = false; });
 
-bindHoldButton(document.getElementById('btnBlow'),
-    () => { if (!keys.space) triggerBubbleInflation(); keys.space = true; },
-    () => { keys.space = false; popBubble(); });
+bindButton(document.getElementById('btnBlow'),
+    () => { tapBlow(); },
+    () => {});
 
 // Player Object
 const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
@@ -280,31 +277,21 @@ const player = {
     popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
 };
 
-function triggerBubbleInflation() {
-    if (player.isGrounded && player.bubbleStage === 0) {
+function tapBlow() {
+    // Tap-to-blow: each press grows the bubble by exactly one stage.
+    // Reaching MAX_BUBBLE_STAGE settles into a stable float (see
+    // bubbleLift) instead of popping or continuing to climb - the player
+    // can hang there, move around, and line up a landing. Tapping again
+    // while already at max is what over-inflates it and pops it; that's
+    // an intentional action now, not something that happens on its own.
+    if (player.bubbleStage === 0) {
+        if (!player.isGrounded) return; // can only start a bubble from the ground
         player.bubbleStage = 1;
         player.isBlowing = true;
-        let overHoldTicks = 0;
-        // Step-by-step automatic inflation while the button stays held.
-        // `player.isBlowing` doubles as the "this blow session is still
-        // active" flag, so a pop from any source (release, landing,
-        // over-inflation) stops this loop instead of it fighting back.
-        const inflationTimer = setInterval(() => {
-            if (!keys.space || !player.isBlowing) {
-                clearInterval(inflationTimer);
-                return;
-            }
-            if (player.bubbleStage < MAX_BUBBLE_STAGE) {
-                player.bubbleStage++;
-            } else {
-                // Already at max size - blowing harder over-inflates it
-                overHoldTicks++;
-                if (overHoldTicks > OVER_INFLATE_GRACE_TICKS) {
-                    clearInterval(inflationTimer);
-                    popBubble(); // over-inflation: it bursts on its own
-                }
-            }
-        }, INFLATE_TICK_MS);
+    } else if (player.bubbleStage < MAX_BUBBLE_STAGE) {
+        player.bubbleStage++;
+    } else {
+        popBubble(); // over-inflated by one tap too many - it bursts
     }
 }
 
