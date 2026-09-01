@@ -8,21 +8,22 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 ## Controls
 
-On touch devices, on-screen ◀ / ▶ / HOLD TO BLOW buttons appear below the
-game and work identically to the keys below (the canvas also scales to
-fit the screen). On desktop:
+You start standing on the ground; blow a bubble to float up to the
+platforms above rather than starting mid-air. On touch devices, on-screen
+◀ / ▶ / HOLD TO BLOW buttons appear below the game and work identically
+to the keys below (the canvas also scales to fit the screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
-You start standing on the ground; blow a bubble to float up to the
-platforms above rather than starting mid-air.
-
-- **Space / W / Up arrow** (hold) — blow up a bubble in 4 stages; each
-  stage lifts you faster than the last (balloon-style progressive lift —
-  bigger bubble, faster float). Keep holding past the max stage and it
-  over-inflates and pops on its own. Release early to pop it voluntarily.
-  Either way, gravity takes back over and you glide down to the ground or
-  the nearest platform below — falling isn't fatal by itself, only
-  missing every platform and hitting the bottom of the screen costs a
+- **Space / W / Up arrow** (hold) — blow up a bubble in 4 stages. Lift
+  eases toward a target speed rather than snapping to it, and the early
+  stages barely lift at all, so pressing the button doesn't yank you off
+  the ground — it's a slow float that only really picks up once the
+  bubble is nearly/fully inflated (balloon-style progressive lift —
+  bigger bubble, faster float, gradually). Keep holding past the max
+  stage and it over-inflates and pops on its own. Release early to pop
+  it voluntarily. Either way, gravity takes back over and you glide down
+  to the ground or the nearest platform below — falling isn't fatal by
+  itself, only missing every platform and hitting the bottom of the screen costs a
   heart.
 
 ## Assets

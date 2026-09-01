@@ -182,7 +182,12 @@ const blowFrames = [null, 'blow_1', 'blow_2', 'blow_3', 'blow_4']; // indexed by
 // screen AND bubbleLift[N] of buoyancy" at the same instant, so the visual
 // bubble size and the character's float speed can never drift apart.
 const MAX_BUBBLE_STAGE = 4;
-const bubbleLift = [0, -0.9, -1.7, -2.4, -3.2]; // bigger bubble = faster upward float
+// Target speeds only - vy eases toward these (see updatePhysics) rather
+// than snapping to them, and early stages barely lift at all so the
+// character doesn't take off the instant the button is pressed. Real
+// float only shows up once the bubble is nearly/fully inflated.
+const bubbleLift = [0, -0.2, -0.5, -0.9, -1.5];
+const BUBBLE_EASING = 0.06; // lower = softer, more gradual float
 const INFLATE_TICK_MS = 250; // time to grow one stage while the button is held
 const OVER_INFLATE_GRACE_TICKS = 1; // extra ticks allowed at max size before it bursts
 
@@ -385,11 +390,16 @@ function updatePhysics() {
     }
 
     // Vertical Physics (Balloon-style progressive lift vs Gravity).
-    // vy is read straight from bubbleLift[bubbleStage] - the exact same
-    // index that picks the on-screen sprite - so lift always matches
-    // the bubble's drawn size, stage for stage.
+    // bubbleLift[bubbleStage] is a target speed, not an instant one - the
+    // same index that picks the on-screen sprite, so the ceiling on how
+    // fast the character CAN rise always matches the bubble's drawn size.
+    // vy eases toward that target each frame instead of snapping to it,
+    // which is what actually reads as "floating" rather than "jumping":
+    // a real balloon doesn't teleport to cruising speed the instant it
+    // leaves the ground.
     if (player.bubbleStage > 0) {
-        player.vy = bubbleLift[player.bubbleStage];
+        const targetVy = bubbleLift[player.bubbleStage];
+        player.vy += (targetVy - player.vy) * BUBBLE_EASING;
     } else {
         // Bubble popped (or never blown) - gravity takes back over, and
         // the descent is a normal fall down to the ground/nearest
