@@ -226,8 +226,10 @@ const MAX_BUBBLE_STAGE = 4;
 const BUBBLE_KICK = -3.0; // instant upward nudge applied on each successful tap
 // vy eases toward this rather than snapping to it, so a tap's kick
 // settles into a slow, steady float rather than a stepped jump. Floating
-// starts the moment he taps once (stage 1) and gets faster each stage.
-const HOVER_TARGET = [0, -0.25, -0.45, -0.65, -0.9];
+// starts the moment he taps once (stage 1) and stays the same slow
+// speed at every stage after that - the bubble visibly grows tap by
+// tap, but the float itself doesn't speed up as it does.
+const HOVER_TARGET = [0, -0.3, -0.3, -0.3, -0.3];
 const HOVER_EASING = 0.05;
 
 // Fall damage: how far he drops (in px) from the highest point of an

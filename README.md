@@ -18,10 +18,11 @@ screen). On desktop:
 - **Space / W / Up arrow** — each tap (a full press-and-release, not a
   hold) locks in one more of 4 sprite stages, and he keeps floating at
   that stage indefinitely, whether you're pressing anything or not:
-  - The first tap already lifts him; every stage after that floats
-    faster. Once he's up there he just keeps climbing, slowly, on his
-    own, steerable left/right the whole time, until the next tap changes
-    his stage or something pops the bubble.
+  - The first tap already lifts him, and every stage after that floats
+    at the exact same slow speed — only the bubble's size changes as you
+    tap, not how fast he climbs. Once he's up there he just keeps
+    climbing, slowly, on his own, steerable left/right the whole time,
+    until the next tap changes his stage or something pops the bubble.
   - **A 5th tap — one past fully inflated — over-inflates it.** It pops
     instantly, gravity takes over hard, and however far he falls before
     landing costs health (see below). Floating straight into the
