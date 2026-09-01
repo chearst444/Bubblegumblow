@@ -227,9 +227,9 @@ const BUBBLE_KICK = -3.0;      // instant upward nudge applied on each successfu
 // a stage-scaled, gentle continued climb (steeper at higher stages) so a
 // sustained hold can still cross real vertical distance to a platform,
 // just at a controlled, non-rocket pace rather than the sharp per-tap kick.
-// Stage 1 is just the visual start of the bubble - no lift yet. Floating
-// begins at stage 2, and gets faster each stage after that.
-const HOVER_TARGET = [0, 0, -0.35, -0.6, -0.9];
+// Floating starts the moment he starts blowing (stage 1) and gets faster
+// every stage after that.
+const HOVER_TARGET = [0, -0.25, -0.45, -0.65, -0.9];
 const HOVER_EASING = 0.05;
 const INFLATE_TICK_MS = 250; // time to grow one stage while the button stays held
 
@@ -319,18 +319,19 @@ player.peakY = player.y;
 let inflationTimer = null;
 
 function startBlowing() {
-    // Press and hold: the initial tap starts the bubble at stage 1 (just
-    // the bubble appearing, no lift yet), then it grows automatically
-    // one stage every INFLATE_TICK_MS for as long as the button stays
-    // down - stage 2 onward each gives a kick of lift, so floating
-    // actually begins at stage 2 and gets stronger through 3 and 4 (see
-    // HOVER_TARGET). Once it reaches stage 4, holding still longer is
-    // what over-inflates it - the timer's next tick past max bursts it.
+    // Press and hold: the moment he starts blowing, he starts floating -
+    // the first tap already gives a kick of lift at stage 1. Holding
+    // keeps growing the bubble one stage every INFLATE_TICK_MS, floating
+    // faster each stage (see HOVER_TARGET), and keeps him floating
+    // (steerable left/right) for as long as the button stays down. Once
+    // it reaches stage 4, holding still longer is what over-inflates it -
+    // the timer's next tick past max bursts it.
     if (player.bubbleStage > 0) return; // already inflated - nothing to start
     if (!player.isGrounded) return; // can only start a bubble from the ground
 
     player.bubbleStage = 1;
     player.holding = true;
+    player.vy = BUBBLE_KICK;
     clearInterval(inflationTimer);
     inflationTimer = setInterval(() => {
         if (!player.holding) {
@@ -339,7 +340,7 @@ function startBlowing() {
         }
         if (player.bubbleStage < MAX_BUBBLE_STAGE) {
             player.bubbleStage++;
-            if (player.bubbleStage >= 2) player.vy = BUBBLE_KICK;
+            player.vy = BUBBLE_KICK;
         } else {
             clearInterval(inflationTimer);
             burstBubble(); // held past fully inflated - over-inflated, it bursts

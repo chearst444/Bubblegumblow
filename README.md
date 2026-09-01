@@ -17,17 +17,15 @@ screen). On desktop:
 - **A / D** or **Left / Right arrows** — move
 - **Space / W / Up arrow** — tap to start inflating the bubble, then hold
   to keep it inflating and floating:
-  - Pressing grows the bubble one of 4 sprite stages roughly every
-    quarter second for as long as you hold it. Stage 1 is just the bubble
-    appearing - no lift yet, he stays put. Stage 2 onward, floating
-    actually starts and gets faster each stage.
-  - Holding at stage 4 keeps climbing at a stable, controlled rate - it
-    won't rocket, but holding long enough gets you as high as you need,
-    and you can still move left/right the whole time.
+  - The moment he starts blowing, he starts floating - the first tap
+    already lifts him. Holding grows the bubble one of 4 sprite stages
+    roughly every quarter second, floating faster each stage, and keeps
+    him floating (steerable left/right the whole time) for as long as
+    you hold it - it won't rocket, but holding long enough gets you as
+    high as you need.
   - **Releasing pops it - no gentle drift.** Gravity takes over hard, and
-    however far he falls before landing costs health (see below). The
-    one exception is letting go before he's ever left the ground (stage
-    1) - nothing to fall from there, so it just deflates in place.
+    however far he falls before landing costs health (see below). Line
+    yourself up over a platform first, then let go to drop onto it.
   - **Holding past fully inflated over-inflates it** - the same instant
     pop and fall as releasing. Floating straight into the underside of a
     platform bursts it the same way too.
