@@ -8,22 +8,41 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 ## Controls
 
-You start standing on the ground, facing into the level; blow a bubble
-to float up to the platforms above rather than starting mid-air. On touch devices, on-screen
-◀ / ▶ / HOLD TO BLOW buttons appear below the game and work identically
-to the keys below (the canvas also scales to fit the screen). On desktop:
+You start standing on the ground, facing into the level; blow a bubble to
+float up to the platforms above rather than starting mid-air. On touch
+devices, on-screen ◀ / ▶ / TAP OR HOLD buttons appear below the game and
+work identically to the keys below (the canvas also scales to fit the
+screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow** (hold) — the bubble grows a stage roughly
-  every quarter second while held, 4 stages total. Vertical speed eases
-  toward a target rather than snapping to it, and the early stages barely
-  lift at all, so pressing it doesn't yank you off the ground. Once fully
-  inflated (stage 4) he doesn't stop climbing — he keeps floating upward
-  at a gentle, steady speed for as long as you keep holding. Let go at
-  any point and the bubble pops, handing control back to gravity.
-  Floating straight into the underside of a platform pops it too, same
-  as letting go — falling isn't fatal by itself, only missing every
-  platform and hitting the bottom of the screen costs a heart.
+- **Space / W / Up arrow**:
+  - **Tap** — pumps the bubble up one of 4 sprite stages and gives it a
+    kick of lift, so a few quick taps get you off the ground.
+  - **Hold** — keeps the bubble at a stable, controlled climb (steeper at
+    higher stages) so you can cross to a platform; it won't rocket, but
+    holding long enough gets you as high as you need.
+  - **Release** — no instant pop. He keeps the bubble and sinks in a
+    slow, controlled drift until he lands somewhere safely, no health
+    lost either way.
+  - **Tap once more after it's already fully inflated** — over-inflates
+    it. It bursts outright, gravity takes over hard instead of the gentle
+    drift, and however far he falls before landing costs health (see
+    below). Floating straight into the underside of a platform bursts it
+    the same way.
+
+### Health
+
+A health bar (starts full, 10 points) replaces a simple life count.
+Landing after a *burst* (over-inflation, or bonking a platform from
+below) costs health scaled to how far he fell from the highest point of
+that flight to where he landed — a little fall costs 1, a bigger one 2,
+and a fall from the highest platform costs 3 — measured by distance
+rather than tied to any specific platform, so it scales to whatever a
+level's tallest platform happens to be. Landing after a voluntary,
+*controlled* drift never costs health, however far it was. Missing every
+platform and hitting the bottom of the screen is the one fall with
+nothing to measure, so it costs the worst tier outright. Health hits 0 →
+game over.
 
 ## Assets
 
@@ -54,7 +73,7 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
   (1–4). Both directions are real art, not a mirrored flip, so
   `drawPlayer()` just picks whichever set matches `player.facing` and
   draws it as-is. The no-suffix files are the character facing/walking
-  **left** and the `_r`-suffixed files face **right** (the suffix names
+  **right** and the `_r`-suffixed files face **left** (the suffix names
   which upload the frames came from, not which way they face - the
   second sheet was supplied as "him turning left" but turned out to be
   the visual mirror of the first). The mapping in `drawPlayer()` is the
@@ -74,3 +93,8 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
 
 The underwater background sheets that were also supplied aren't used —
 this game is set over city rooftops, not underwater.
+
+**Missing asset:** a health-meter image was mentioned but never actually
+came through as an attachment, so the health bar in the UI panel right
+now is a plain CSS gradient bar rather than themed art. Send it over and
+it'll get sliced in to replace that placeholder.

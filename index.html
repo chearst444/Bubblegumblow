@@ -74,8 +74,25 @@
         .coins {
             color: #ffd700;
         }
-        .hearts {
+        .health {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             color: #ff5577;
+        }
+        .health-bar {
+            width: 90px;
+            height: 14px;
+            border: 2px solid #7a1f2b;
+            border-radius: 7px;
+            background: #3a1015;
+            overflow: hidden;
+        }
+        .health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #ff5577, #ff8fa8);
+            transition: width 0.2s ease-out;
         }
         .touch-controls {
             flex: none;
@@ -128,11 +145,14 @@
             Level: <span id="currentLevel">1</span>/3
         </div>
         <div class="coins">Coins: <span id="coinCount">0</span></div>
-        <div class="hearts">Hearts: <span id="heartCount">♥♥♥</span></div>
+        <div class="health">
+            Health
+            <div class="health-bar"><div class="health-fill" id="healthFill"></div></div>
+        </div>
     </div>
     <div class="touch-controls">
         <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
-        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 HOLD TO BLOW</button>
+        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 TAP OR HOLD</button>
         <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
     </div>
 </div>
@@ -157,8 +177,8 @@ loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
 
 // Player character frames - real dedicated art for each facing direction,
-// no mirroring. Confusingly, the no-suffix files are him facing LEFT and
-// the "_r" files face RIGHT (the suffix names which upload they came from,
+// no mirroring. Confusingly, the no-suffix files are him facing RIGHT and
+// the "_r" files face LEFT (the suffix names which upload they came from,
 // not which way they face - see drawPlayer for the mapping). blow_1..
 // blow_4 line up with player.bubbleStage for whichever direction is active.
 loadSprite('walk_0', 'assets/player/walk_0.png');
@@ -197,26 +217,35 @@ const walkFramesR = ['walk_0_r', 'walk_1_r', 'walk_2_r', 'walk_3_r'];
 const idleFramesR = ['idle_0_r', 'idle_1_r', 'idle_2_r'];
 const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 
-// Balloon physics: one array, indexed by bubbleStage, is the single source
-// of truth for both the sprite frame (blowFrames above) and the upward
-// lift it produces (bubbleLift below) - stage N always means "blow_N on
-// screen AND bubbleLift[N] of buoyancy" at the same instant, so the visual
-// bubble size and the character's float speed can never drift apart.
+// Balloon physics. blowFrames[bubbleStage] is the sprite; the physics
+// below reads player.holding/player.drifting rather than the stage
+// itself, since the same stage looks different depending on whether the
+// button is currently down.
 const MAX_BUBBLE_STAGE = 4;
-// Target speeds only - vy eases toward these (see updatePhysics) rather
-// than snapping to them, and early stages barely lift at all so the
-// character doesn't take off the instant the button is pressed. Reaching
-// stage 4 doesn't stop the climb - he keeps floating upward for as long
-// as the button stays held, just at a gentle, capped speed rather than
-// still accelerating.
-const bubbleLift = [0, -0.2, -0.5, -0.9, -1.3];
-const BUBBLE_EASING = 0.06; // lower = softer, more gradual float
-const INFLATE_TICK_MS = 250; // time to grow one stage while the button is held
+const BUBBLE_KICK = -3.0;      // instant upward nudge applied on each successful pump
+// While holding (no new tap), vy eases toward this rather than snapping -
+// a stage-scaled, gentle continued climb (steeper at higher stages) so a
+// sustained hold can still cross real vertical distance to a platform,
+// just at a controlled, non-rocket pace rather than the sharp per-tap kick.
+const HOVER_TARGET = [0, -0.15, -0.35, -0.6, -0.9];
+const HOVER_EASING = 0.05;
+const DRIFT_TARGET = 0.6;    // while drifting (released): gentle, controlled sink speed
+const DRIFT_EASING = 0.04;
+
+// Fall damage: how far he drops (in px) from the highest point of an
+// airborne excursion to where he lands decides the tier. Distance-based
+// rather than tied to any specific platform, so it scales to whatever a
+// level's tallest platform happens to be instead of being hardcoded to
+// this game's current three levels.
+const FALL_TRIVIAL = 20;   // below this, no damage - just a short hop
+const FALL_SMALL = 90;     // -1 health
+const FALL_MEDIUM = 190;   // -2 health; beyond this is treated as "highest platform" -3
 
 // Game State
 let currentLevel = 1;
 let scoreCoins = 0;
-let playerHearts = 3;
+const MAX_HEALTH = 10;
+let playerHealth = MAX_HEALTH;
 let gameState = 'PLAYING'; // PLAYING, GAMEOVER, WIN
 
 // Controls
@@ -226,7 +255,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        if (!keys.space) startBlowing(); // fire once per press, not per repeat-fired keydown
+        if (!keys.space) tapPump(); // fire once per press, not per repeat-fired keydown
         keys.space = true;
     }
 });
@@ -236,7 +265,7 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
         keys.space = false;
-        stopBlowing();
+        releaseHold();
     }
 });
 
@@ -260,8 +289,8 @@ bindButton(document.getElementById('btnRight'),
     () => { keys.right = false; });
 
 bindButton(document.getElementById('btnBlow'),
-    () => { startBlowing(); },
-    () => { stopBlowing(); });
+    () => { tapPump(); },
+    () => { releaseHold(); });
 
 // Player Object
 const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
@@ -276,58 +305,76 @@ const player = {
     gravity: 0.5,
     isGrounded: false,
     bubbleStage: 0, // 0: None, 1-4: Progress
-    isBlowing: false,
+    holding: false,  // button currently down with a bubble inflated - stable float
+    drifting: false, // released - gentle, controlled sink until he lands
+    hardPop: false,  // burst from over-inflation or a ceiling bump - next landing takes fall damage
+    peakY: 0,        // highest point (min y) reached since he was last grounded
     facing: 'right', // starts facing into the level, toward the goal; updated from player.vx once he moves
     animFrame: 0,
     animTimer: 0,
     popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
 };
+player.peakY = player.y;
 
-let inflationTimer = null;
-
-function startBlowing() {
-    // Press-and-hold: the bubble grows a stage every INFLATE_TICK_MS while
-    // held. Once it reaches MAX_BUBBLE_STAGE it stops growing but keeps
-    // giving lift (bubbleLift[MAX_BUBBLE_STAGE], applied every physics
-    // frame - see updatePhysics) for as long as the button stays down, so
-    // he keeps floating upward instead of just hanging there. Letting go
-    // pops it (see stopBlowing). A fresh press while somehow already
-    // inflated (e.g. a quick second tap that beat the release event) also
-    // pops it - "tap it again and it pops" - rather than starting a
-    // second bubble on top of the first.
-    if (player.bubbleStage > 0) {
-        popBubble();
+function tapPump() {
+    // Each tap pumps the bubble up one sprite stage and gives it a kick
+    // of lift - "rise higher into the air with each pump." Starting a
+    // bubble from nothing still needs solid ground under him; every pump
+    // after that (including re-grabbing it mid-drift) doesn't.
+    if (player.bubbleStage === 0) {
+        if (!player.isGrounded) return;
+        player.bubbleStage = 1;
+    } else if (player.bubbleStage < MAX_BUBBLE_STAGE) {
+        player.bubbleStage++;
+    } else {
+        burstBubble(); // one pump past max - over-inflated, it bursts
         return;
     }
-    if (!player.isGrounded) return; // can only start a bubble from the ground
-
-    player.bubbleStage = 1;
-    player.isBlowing = true;
-    clearInterval(inflationTimer);
-    inflationTimer = setInterval(() => {
-        if (!player.isBlowing) {
-            clearInterval(inflationTimer);
-            return;
-        }
-        if (player.bubbleStage < MAX_BUBBLE_STAGE) {
-            player.bubbleStage++;
-            if (player.bubbleStage === MAX_BUBBLE_STAGE) clearInterval(inflationTimer);
-        }
-    }, INFLATE_TICK_MS);
+    player.holding = true;
+    player.drifting = false;
+    player.vy = BUBBLE_KICK;
 }
 
-function stopBlowing() {
-    // Letting go pops the bubble, whether it was still inflating or
-    // already fully floating - hold it up there, then let go to come down.
-    popBubble();
+function releaseHold() {
+    // Letting go doesn't pop it - it's a controlled deflate. He keeps the
+    // bubble's current size and sinks slowly until he lands.
+    if (player.bubbleStage === 0) return;
+    player.holding = false;
+    player.drifting = true;
 }
 
-function popBubble() {
-    if (player.bubbleStage > 0) {
-        player.bubbleStage = 0;
-        player.isBlowing = false;
-        player.popFlashTimer = 10; // frames to show the pop sprite
-    }
+function burstBubble() {
+    // Over-inflation, or bonking a platform from below: the bubble bursts
+    // outright and gravity takes over hard (not the gentle drift) - this
+    // is the "instant pop" penalty, which turns into fall damage at
+    // whatever platform/ground he eventually lands on (see landing code).
+    player.bubbleStage = 0;
+    player.holding = false;
+    player.drifting = false;
+    player.hardPop = true;
+    player.popFlashTimer = 10;
+}
+
+function softLand() {
+    // A controlled landing - whether he drifted down deliberately or was
+    // still actively holding when he touched down - deflates the bubble
+    // with no fall-damage consequence.
+    player.bubbleStage = 0;
+    player.holding = false;
+    player.drifting = false;
+    player.popFlashTimer = 10;
+}
+
+function applyFallDamage(distance) {
+    let dmg = 0;
+    if (distance >= FALL_MEDIUM) dmg = 3;       // from the highest platform
+    else if (distance >= FALL_SMALL) dmg = 2;   // a bigger fall
+    else if (distance >= FALL_TRIVIAL) dmg = 1; // a little fall
+    if (dmg === 0) return;
+
+    playerHealth = Math.max(0, playerHealth - dmg);
+    document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
+    if (playerHealth <= 0) gameState = 'GAMEOVER';
 }
 
 // Level Data & Platforms
@@ -344,6 +391,10 @@ function loadLevel(levelNum) {
     player.isGrounded = true;
     player.facing = 'right'; // face into the new level
     player.bubbleStage = 0;
+    player.holding = false;
+    player.drifting = false;
+    player.hardPop = false;
+    player.peakY = player.y;
     player.popFlashTimer = 0;
 
     platforms = [
@@ -423,26 +474,25 @@ function updatePhysics() {
         player.animFrame++;
     }
 
-    // Vertical Physics (Balloon-style progressive lift vs Gravity).
-    // bubbleLift[bubbleStage] is a target speed, not an instant one - the
-    // same index that picks the on-screen sprite, so the ceiling on how
-    // fast the character CAN rise always matches the bubble's drawn size.
-    // vy eases toward that target each frame instead of snapping to it,
-    // which is what actually reads as "floating" rather than "jumping":
-    // a real balloon doesn't teleport to cruising speed the instant it
-    // leaves the ground.
-    if (player.bubbleStage > 0) {
-        const targetVy = bubbleLift[player.bubbleStage];
-        player.vy += (targetVy - player.vy) * BUBBLE_EASING;
+    // Vertical Physics: stable float while held, gentle controlled sink
+    // once released, hard gravity once the bubble has actually burst.
+    // Either way vy eases toward a target rather than snapping to it, so
+    // every transition (a pump's kick settling into a hover, a release
+    // easing into the drift) feels smooth instead of stepped.
+    if (player.holding) {
+        player.vy += (HOVER_TARGET[player.bubbleStage] - player.vy) * HOVER_EASING;
+    } else if (player.drifting) {
+        player.vy += (DRIFT_TARGET - player.vy) * DRIFT_EASING;
     } else {
-        // Bubble popped (or never blown) - gravity takes back over, and
-        // the descent is a normal fall down to the ground/nearest
-        // platform below, not an automatic penalty.
         player.vy += player.gravity;
     }
 
     player.y += player.vy;
     player.isGrounded = false;
+
+    // Track the highest point (lowest y) reached since he was last
+    // grounded, so a landing can tell how big a fall it was.
+    player.peakY = Math.min(player.peakY, player.y);
 
     // Platform Collisions
     platforms.forEach(plat => {
@@ -455,10 +505,16 @@ function updatePhysics() {
             player.y + player.height - player.vy <= plat.y
         ) {
             // Landing on top
+            const fallDistance = (plat.y - player.height) - player.peakY;
             player.y = plat.y - player.height;
             player.vy = 0;
             player.isGrounded = true;
-            if (player.bubbleStage > 0) popBubble(); // Pop upon hitting ground safely
+            if (player.hardPop) {
+                applyFallDamage(fallDistance);
+                player.hardPop = false;
+            }
+            if (player.bubbleStage > 0) softLand();
+            player.peakY = player.y;
         } else if (
             player.vy < 0 &&
             player.y < plat.y + plat.h &&
@@ -468,7 +524,7 @@ function updatePhysics() {
             // bubble can't push through it, so it bursts and he drops.
             player.y = plat.y + plat.h;
             player.vy = 0;
-            if (player.bubbleStage > 0) popBubble();
+            if (player.bubbleStage > 0) burstBubble();
         }
     });
 
@@ -504,12 +560,13 @@ function updatePhysics() {
 }
 
 function loseLife() {
-    playerHearts--;
-    let heartsText = '';
-    for (let i = 0; i < playerHearts; i++) heartsText += '♥';
-    document.getElementById('heartCount').innerText = heartsText;
+    // Missing every platform and hitting the bottom of the screen - the
+    // one fall with no landing to measure, so it costs the worst tier
+    // outright rather than going through applyFallDamage().
+    playerHealth = Math.max(0, playerHealth - 3);
+    document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
 
-    if (playerHearts <= 0) {
+    if (playerHealth <= 0) {
         gameState = 'GAMEOVER';
     } else {
         // Reset position without penalty loss of level progress
@@ -520,20 +577,22 @@ function loseLife() {
         player.isGrounded = true;
         player.facing = 'right';
         player.bubbleStage = 0;
+        player.holding = false;
+        player.drifting = false;
+        player.hardPop = false;
+        player.peakY = player.y;
         player.popFlashTimer = 0;
     }
 }
 
 function drawPlayer() {
-    // Swapped back again - the previous mapping still read as reversed.
-    // See the loadSprite comment above for which physical sheet each key
-    // actually came from; this line is the only thing that decides which
-    // one is shown for which travel direction.
+    // Facing <-> sheet mapping - flipped back per explicit feedback that
+    // the previous version had it backwards in both directions.
     const right = player.facing === 'right';
-    const walk = right ? walkFramesR : walkFrames;
-    const idle = right ? idleFramesR : idleFrames;
-    const blow = right ? blowFramesR : blowFrames;
-    const fall = right ? 'fall_0_r' : 'fall_0';
+    const walk = right ? walkFrames : walkFramesR;
+    const idle = right ? idleFrames : idleFramesR;
+    const blow = right ? blowFrames : blowFramesR;
+    const fall = right ? 'fall_0' : 'fall_0_r';
 
     // Pick the frame for the current state: popping > blowing > falling > walking > idle
     let key;
