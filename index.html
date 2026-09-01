@@ -172,6 +172,7 @@ function loadSprite(name, src) {
 }
 loadSprite('coin', 'assets/star_blue.png');
 loadSprite('goal', 'assets/star_gold.png');
+loadSprite('health', 'assets/health_up.png');
 loadSprite('bgCity', 'assets/bg_city.png');
 loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
@@ -222,9 +223,10 @@ const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 // Tap 3: big bubble (blow_3). Tap 4: full (blow_4), keep holding to steer.
 // Let go at tap 4 to drop. Tap 5 pops.
 const MAX_BUBBLE_STAGE = 4;
-const BUBBLE_KICK = -3.0; // upward nudge on each grow tap (2, 3, 4)
-const HOVER_TARGET = [0, -0.25, -0.45, -0.65, -0.9];
-const HOVER_EASING = 0.05;
+const BUBBLE_KICK = -1.4; // gentler lift on each grow tap (2, 3, 4)
+const HOVER_TARGET = [0, -0.10, -0.12, -0.14, -0.16];
+const HOVER_EASING = 0.04;
+const HEALTH_BOOST = 3; // about a third of the 10 point bar
 
 // Fall damage: how far he drops (in px) from the highest point of an
 // airborne excursion to where he lands decides the tier. Distance-based
@@ -396,6 +398,7 @@ function applyFallDamage(distance) {
 // Level Data & Platforms
 let platforms = [];
 let coins = [];
+let healthPickups = [];
 let goalZone = {};
 
 function loadLevel(levelNum) {
@@ -417,6 +420,7 @@ function loadLevel(levelNum) {
     ];
 
     coins = [];
+    healthPickups = [];
 
     if (levelNum === 1) {
         platforms.push(
@@ -430,6 +434,8 @@ function loadLevel(levelNum) {
             { x: 430, y: 200, collected: false }, { x: 450, y: 200, collected: false }, { x: 470, y: 200, collected: false },
             { x: 630, y: 120, collected: false }, { x: 650, y: 120, collected: false }, { x: 670, y: 120, collected: false }
         );
+        // Little health up on the last bar, about a third of the bar
+        healthPickups.push({ x: 695, y: 128, collected: false });
         goalZone = { x: 740, y: 100, w: 40, h: 60 };
     } else if (levelNum === 2) {
         platforms.push(
@@ -562,6 +568,16 @@ function updatePhysics() {
             coin.collected = true;
             scoreCoins += 10;
             document.getElementById('coinCount').innerText = scoreCoins;
+        }
+    });
+
+    healthPickups.forEach(item => {
+        if (!item.collected &&
+            player.x < item.x + 16 && player.x + player.width > item.x &&
+            player.y < item.y + 16 && player.y + player.height > item.y) {
+            item.collected = true;
+            playerHealth = Math.min(MAX_HEALTH, playerHealth + HEALTH_BOOST);
+            document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
         }
     });
 
@@ -705,6 +721,23 @@ function render() {
                 ctx.fillStyle = '#ffc107';
                 ctx.beginPath();
                 ctx.arc(coin.x + 6, coin.y + 6, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    });
+
+    healthPickups.forEach(item => {
+        if (!item.collected) {
+            if (sprites.health && sprites.health.complete && sprites.health.naturalWidth) {
+                ctx.drawImage(sprites.health, item.x - 4, item.y - 4, 24, 24);
+            } else {
+                ctx.fillStyle = '#ff8fa8';
+                ctx.beginPath();
+                ctx.moveTo(item.x + 8, item.y + 4);
+                ctx.bezierCurveTo(item.x + 8, item.y, item.x, item.y, item.x, item.y + 6);
+                ctx.bezierCurveTo(item.x, item.y + 12, item.x + 8, item.y + 16, item.x + 8, item.y + 16);
+                ctx.bezierCurveTo(item.x + 8, item.y + 16, item.x + 16, item.y + 12, item.x + 16, item.y + 6);
+                ctx.bezierCurveTo(item.x + 16, item.y, item.x + 8, item.y, item.x + 8, item.y + 4);
                 ctx.fill();
             }
         }
