@@ -13,6 +13,9 @@ game and work identically to the keys below (the canvas also scales to
 fit the screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
+You start standing on the ground; blow a bubble to float up to the
+platforms above rather than starting mid-air.
+
 - **Space / W / Up arrow** (hold) — blow up a bubble in 4 stages; each
   stage lifts you faster than the last (balloon-style progressive lift —
   bigger bubble, faster float). Keep holding past the max stage and it
@@ -33,13 +36,18 @@ fit the screen). On desktop:
   continuous green ground plane, layered behind a sky gradient. Mountains
   and buildings are placed so every peak/base stays fully on-canvas and
   flush with the ground — no clipped peaks, no gap of bare sky showing
-  above the ground line.
+  above the ground line. The orange tree is kept away from the player's
+  starting corner (a green one sits there instead) since its color read
+  as another bubble when blown up nearby.
 - `assets/world_badge.png` — small decorative icon next to the level
   counter in the UI panel.
-- `assets/platform_tile.png` — a frost-topped candy tile strip sliced
-  from the "world 1 CAKES" sheet (the same sheet `world_badge.png` comes
-  from); tiled via `ctx.createPattern(..., 'repeat')` to texture every
-  floating platform instead of a flat gray rectangle.
+- `assets/platform_tile.png` — a small procedurally-generated candy-stripe
+  tile (24×20px, in the same purple/teal/gold palette sampled from the
+  "world 1 CAKES" sheet). An early version sliced straight from that sheet
+  actually captured several adjacent platform segments joined together,
+  so tiling it produced visible periodic gaps; every stripe/scallop period
+  in this version divides the tile size evenly, so `ctx.createPattern(...,
+  'repeat')` tiles it with zero seams at any platform width.
 - `assets/player/*.png` — 13 frames sliced from the bubblegum-blowing boy
   character sheet: a 4-frame walk cycle, a 3-frame idle bob, a fall/jump
   pose, and 4 blow-up frames + a pop frame that map directly onto

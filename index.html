@@ -237,9 +237,10 @@ bindHoldButton(document.getElementById('btnBlow'),
     () => { keys.space = false; popBubble(); });
 
 // Player Object
+const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
 const player = {
     x: 50,
-    y: 300,
+    y: GROUND_Y - 32, // feet resting on the ground - blow a bubble to leave it
     width: 32,
     height: 32,
     vx: 0,
@@ -299,9 +300,10 @@ let goalZone = {};
 function loadLevel(levelNum) {
     currentLevel = levelNum;
     player.x = 50;
-    player.y = 300;
+    player.y = GROUND_Y - player.height; // start standing on the ground, not mid-air
     player.vx = 0;
     player.vy = 0;
+    player.isGrounded = true;
     player.bubbleStage = 0;
     player.popFlashTimer = 0;
 
@@ -457,9 +459,10 @@ function loseLife() {
     } else {
         // Reset position without penalty loss of level progress
         player.x = 50;
-        player.y = 300;
+        player.y = GROUND_Y - player.height;
         player.vx = 0;
         player.vy = 0;
+        player.isGrounded = true;
         player.bubbleStage = 0;
         player.popFlashTimer = 0;
     }
