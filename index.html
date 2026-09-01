@@ -218,12 +218,11 @@ const walkFramesR = ['walk_0_r', 'walk_1_r', 'walk_2_r', 'walk_3_r'];
 const idleFramesR = ['idle_0_r', 'idle_1_r', 'idle_2_r'];
 const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 
-// Balloon physics. Inflate is four taps, not a hold charge.
-// Tap 1: nothing. Tap 2: tiny bubble (blow_1) and he starts floating.
-// Tap 3: big bubble (blow_3). Tap 4: full (blow_4), keep holding to steer.
-// Let go at tap 4 to drop. Tap 5 pops.
+// Balloon physics. Inflate is tap counted.
+// Tap 1: tiny bubble, start floating. Tap 2: a bit bigger.
+// Tap 3: all the way. Tap 4: hold to steer. Let go to drop. Tap 5 pops.
 const MAX_BUBBLE_STAGE = 4;
-const BUBBLE_KICK = -1.4; // gentler lift on each grow tap (2, 3, 4)
+const BUBBLE_KICK = -1.4; // gentler lift on each grow tap
 const HOVER_TARGET = [0, -0.10, -0.12, -0.14, -0.16];
 const HOVER_EASING = 0.04;
 const HEALTH_BOOST = 3; // about a third of the 10 point bar
@@ -310,8 +309,8 @@ const player = {
 };
 player.peakY = player.y;
 
-// Counted taps for this blow cycle. 0 idle, 1 nothing, 2 tiny, 3 big,
-// 4 full (hold to steer), 5 popped.
+// Counted taps for this blow cycle. 0 idle, 1 tiny, 2 bigger, 3 all the way,
+// 4 hold to steer, 5 popped.
 let pumpCount = 0;
 
 function tapPump() {
@@ -330,33 +329,35 @@ function tapPump() {
     pumpCount++;
 
     if (pumpCount === 1) {
-        // First tap: nothing. No sprite, no lift.
-        return;
-    }
-
-    if (pumpCount === 2) {
-        // Tiny bubble. Start floating and keep floating after release.
+        // Tiny bubble. Start floating the moment you see it.
         player.bubbleStage = 1;
         player.vy = BUBBLE_KICK;
         return;
     }
 
+    if (pumpCount === 2) {
+        // A little bit bigger. Keep floating after release.
+        player.bubbleStage = 2;
+        player.vy = BUBBLE_KICK;
+        return;
+    }
+
     if (pumpCount === 3) {
-        // Big bubble. Still floating without holding.
-        player.bubbleStage = 3;
+        // All the way blown up. Still floating without holding.
+        player.bubbleStage = 4;
         player.vy = BUBBLE_KICK;
         return;
     }
 
     if (pumpCount === 4) {
-        // Full bubble. Keep this press held to steer.
+        // Hold this press to steer at full size.
         player.bubbleStage = 4;
         player.vy = BUBBLE_KICK;
     }
 }
 
 function releaseHold() {
-    // Taps 1 to 3: letting go does not drop. He keeps floating after tap 2.
+    // Taps 1 to 3: letting go does not drop. He keeps floating.
     if (pumpCount < 4) return;
     // Tap 4: let go of the hold to drop down. Not a pop.
     if (pumpCount === 4 && player.bubbleStage > 0) {
@@ -495,7 +496,7 @@ function updatePhysics() {
         player.animFrame++;
     }
 
-    // Vertical physics: hover while a bubble is up. Taps 2 and 3 keep
+    // Vertical physics: hover while a bubble is up. Taps 1 to 3 keep
     // floating after release. Tap 4 only while the blow button is held.
     if (player.bubbleStage > 0) {
         player.vy += (HOVER_TARGET[player.bubbleStage] - player.vy) * HOVER_EASING;
