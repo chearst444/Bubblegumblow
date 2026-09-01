@@ -21,20 +21,27 @@
             border: 4px solid #333;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
             background: #000;
+            max-width: min(800px, 96vw);
+            width: 100%;
         }
         canvas {
             display: block;
+            width: 100%;
+            height: auto;
             background: linear-gradient(to bottom, #4a90e2, #87ceeb);
         }
         .ui-panel {
             background: #222;
-            padding: 10px;
+            padding: 8px 10px;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-around;
-            font-size: 18px;
+            gap: 4px 14px;
+            font-size: clamp(13px, 3.8vw, 18px);
             font-weight: bold;
             border-top: 2px solid #444;
+            white-space: nowrap;
         }
         .ui-panel .badge {
             display: flex;
@@ -52,6 +59,42 @@
         .hearts {
             color: #ff5577;
         }
+        .touch-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-top: 2px solid #444;
+        }
+        .touch-controls button {
+            font-family: inherit;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            color: #1a1a1a;
+            padding: 16px 0;
+            width: 64px;
+            font-size: 22px;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .move-btn {
+            background: linear-gradient(to bottom, #b3e5fc, #4fc3f7);
+        }
+        .move-btn:active {
+            background: linear-gradient(to bottom, #81d4fa, #29b6f6);
+        }
+        .blow-btn {
+            flex: 1;
+            background: linear-gradient(to bottom, #ffcdd2, #ff8a80);
+            font-size: 16px;
+        }
+        .blow-btn:active {
+            background: linear-gradient(to bottom, #ff8a80, #ff5252);
+        }
     </style>
 </head>
 <body>
@@ -65,6 +108,11 @@
         </div>
         <div class="coins">Coins: <span id="coinCount">0</span></div>
         <div class="hearts">Hearts: <span id="heartCount">♥♥♥</span></div>
+    </div>
+    <div class="touch-controls">
+        <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
+        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 HOLD TO BLOW</button>
+        <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
     </div>
 </div>
 
@@ -143,6 +191,29 @@ window.addEventListener('keyup', (e) => {
         popBubble();
     }
 });
+
+// On-screen touch controls (phones/tablets have no keyboard) - these
+// drive the exact same `keys` flags and blow functions as the keyboard
+// handlers above, so all the physics/animation logic only has to exist
+// once. Pointer events cover touch, mouse, and stylus in one handler.
+function bindHoldButton(el, onDown, onUp) {
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
+    el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
+    el.addEventListener('pointerleave', onUp);
+    el.addEventListener('pointercancel', onUp);
+}
+
+bindHoldButton(document.getElementById('btnLeft'),
+    () => { keys.left = true; },
+    () => { keys.left = false; });
+
+bindHoldButton(document.getElementById('btnRight'),
+    () => { keys.right = true; },
+    () => { keys.right = false; });
+
+bindHoldButton(document.getElementById('btnBlow'),
+    () => { if (!keys.space) triggerBubbleInflation(); keys.space = true; },
+    () => { keys.space = false; popBubble(); });
 
 // Player Object
 const player = {

@@ -8,6 +8,10 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 ## Controls
 
+On touch devices, on-screen ◀ / ▶ / HOLD TO BLOW buttons appear below the
+game and work identically to the keys below (the canvas also scales to
+fit the screen). On desktop:
+
 - **A / D** or **Left / Right arrows** — move
 - **Space / W / Up arrow** (hold) — blow up a bubble in 4 stages; each
   stage lifts you faster than the last (balloon-style progressive lift —
