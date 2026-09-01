@@ -46,92 +46,134 @@
             object-fit: contain;
             touch-action: none;
             background: linear-gradient(to bottom, #4a90e2, #87ceeb);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        img {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
         .ui-panel {
             flex: none;
-            background: #222;
-            padding: 8px 10px;
+            background: #1a2430;
+            padding: 6px 8px;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-around;
-            gap: 4px 14px;
-            font-size: clamp(13px, 3.8vw, 18px);
+            gap: 6px 10px;
+            font-size: clamp(12px, 3.4vw, 16px);
             font-weight: bold;
-            border-top: 2px solid #444;
+            border-top: 3px solid #35506a;
             white-space: nowrap;
+            color: #f4f0e6;
         }
-        .ui-panel .badge {
+        .hud-chip {
             display: flex;
             align-items: center;
             gap: 6px;
+            background-image: url('assets/ui/hud_bar.png');
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+            image-rendering: pixelated;
+            padding: 4px 10px 4px 8px;
+            min-height: 26px;
         }
         .ui-panel img.badge-icon {
-            height: 28px;
+            height: 18px;
             width: auto;
             image-rendering: pixelated;
         }
         .coins {
-            color: #ffd700;
+            color: #f0d060;
         }
         .health {
             display: flex;
             align-items: center;
-            gap: 6px;
-            color: #ff5577;
+            gap: 8px;
+            color: #f4f0e6;
+        }
+        .hearts {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .hearts img {
+            width: 18px;
+            height: 16px;
+            image-rendering: pixelated;
         }
         .health-bar {
-            width: 90px;
-            height: 14px;
-            border: 2px solid #7a1f2b;
-            border-radius: 7px;
-            background: #3a1015;
+            width: 88px;
+            height: 12px;
+            border: 2px solid #35506a;
+            border-radius: 0;
+            background: #1a2430 url('assets/ui/health_pip.png') left center / auto 100% no-repeat;
+            image-rendering: pixelated;
             overflow: hidden;
         }
         .health-fill {
             height: 100%;
             width: 100%;
-            background: linear-gradient(to right, #ff5577, #ff8fa8);
-            transition: width 0.2s ease-out;
+            background: #c23b32;
+            box-shadow: inset 0 2px 0 #e07060;
+            transition: width 0.15s steps(10);
         }
         .touch-controls {
             flex: none;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            padding: 10px;
-            background: #1a1a1a;
-            border-top: 2px solid #444;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #121820;
+            border-top: 3px solid #35506a;
         }
         .touch-controls button {
             font-family: inherit;
             font-weight: bold;
             border: none;
-            border-radius: 12px;
-            color: #1a1a1a;
-            padding: 16px 0;
-            width: 64px;
-            font-size: 22px;
+            border-radius: 0;
+            color: #f4f0e6;
+            padding: 0;
+            width: 72px;
+            height: 44px;
+            font-size: 14px;
+            letter-spacing: 0.5px;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
+            image-rendering: pixelated;
+            background-color: transparent;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+        }
+        .touch-controls button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
         }
         .move-btn {
-            background: linear-gradient(to bottom, #b3e5fc, #4fc3f7);
+            background-image: none;
         }
         .move-btn:active {
-            background: linear-gradient(to bottom, #81d4fa, #29b6f6);
+            filter: brightness(0.8);
         }
         .blow-btn {
             flex: 1;
-            background: linear-gradient(to bottom, #ffcdd2, #ff8a80);
-            font-size: 16px;
+            width: auto;
+            background-image: url('assets/ui/btn_blow.png');
+            font-size: clamp(12px, 3.2vw, 15px);
+            color: #f4f0e6;
+            text-shadow: 1px 1px 0 #1a2430;
         }
         .blow-btn:active {
-            background: linear-gradient(to bottom, #ff8a80, #ff5252);
+            filter: brightness(0.8);
         }
     </style>
 </head>
@@ -140,20 +182,29 @@
 <div id="game-container">
     <canvas id="gameCanvas" width="800" height="450"></canvas>
     <div class="ui-panel">
-        <div class="badge">
+        <div class="badge hud-chip">
             <img class="badge-icon" src="assets/world_badge.png" alt="">
-            Level: <span id="currentLevel">1</span>/3
+            LV <span id="currentLevel">1</span>/3
         </div>
-        <div class="coins">Coins: <span id="coinCount">0</span></div>
+        <div class="coins hud-chip">
+            <img class="badge-icon" src="assets/ui/coin_icon.png" alt="">
+            <span id="coinCount">0</span>
+        </div>
         <div class="health">
-            Health
+            <div class="hearts" id="hearts">
+                <img src="assets/ui/heart_full.png" alt="">
+                <img src="assets/ui/heart_full.png" alt="">
+                <img src="assets/ui/heart_full.png" alt="">
+                <img src="assets/ui/heart_full.png" alt="">
+                <img src="assets/ui/heart_full.png" alt="">
+            </div>
             <div class="health-bar"><div class="health-fill" id="healthFill"></div></div>
         </div>
     </div>
     <div class="touch-controls">
-        <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
-        <button class="blow-btn" id="btnBlow" aria-label="Tap to blow, hold at full size">🫧 TAP TO BLOW</button>
-        <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
+        <button class="move-btn" id="btnLeft" aria-label="Move left"><img src="assets/ui/btn_left.png" alt=""></button>
+        <button class="blow-btn" id="btnBlow" aria-label="Tap to blow, hold at full size">TAP TO BLOW</button>
+        <button class="move-btn" id="btnRight" aria-label="Move right"><img src="assets/ui/btn_right.png" alt=""></button>
     </div>
 </div>
 
@@ -174,6 +225,10 @@ loadSprite('coin', 'assets/star_blue.png');
 loadSprite('goal', 'assets/star_gold.png');
 loadSprite('health', 'assets/health_up.png');
 loadSprite('bgCity', 'assets/bg_city.png');
+loadSprite('bgCity2', 'assets/bg_city_l2.png');
+loadSprite('bgCity3', 'assets/bg_city_l3.png');
+loadSprite('banana', 'assets/banana.png');
+loadSprite('panel', 'assets/ui/panel.png');
 loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
 
@@ -227,6 +282,23 @@ const BUBBLE_KICK = [0, -1.05, -1.45, -1.65, -1.85];
 const HOVER_TARGET = [0, -0.10, -0.20, -0.28, -0.36];
 const HOVER_EASING = 0.045;
 const HEALTH_BOOST = 3; // about a third of the 10 point bar
+const HEART_COUNT = 5; // 2 health points per heart
+
+function updateHealthUI() {
+    const fill = document.getElementById('healthFill');
+    if (fill) fill.style.width = (playerHealth / MAX_HEALTH * 100) + '%';
+    const wrap = document.getElementById('hearts');
+    if (!wrap) return;
+    let htmlHearts = '';
+    for (let i = 0; i < HEART_COUNT; i++) {
+        const hp = playerHealth - i * 2;
+        let src = 'assets/ui/heart_empty.png';
+        if (hp >= 2) src = 'assets/ui/heart_full.png';
+        else if (hp === 1) src = 'assets/ui/heart_half.png';
+        htmlHearts += '<img src="' + src + '" alt="">';
+    }
+    wrap.innerHTML = htmlHearts;
+}
 
 // Fall damage: how far he drops (in px) from the highest point of an
 // airborne excursion to where he lands decides the tier. Distance-based
@@ -418,7 +490,7 @@ function applyFallDamage(distance) {
     if (dmg === 0) return;
 
     playerHealth = Math.max(0, playerHealth - dmg);
-    document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
+    updateHealthUI();
     if (playerHealth <= 0) gameState = 'GAMEOVER';
 }
 
@@ -464,7 +536,7 @@ function loadLevel(levelNum) {
             { x: 630, y: 120, collected: false }, { x: 650, y: 120, collected: false }, { x: 670, y: 120, collected: false }
         );
         // Little health up on the last bar, about a third of the bar
-        healthPickups.push({ x: 695, y: 128, collected: false });
+        healthPickups.push({ x: 695, y: 128, collected: false, kind: 'heart' });
         goalZone = { x: 740, y: 100, w: 40, h: 60 };
     } else if (levelNum === 2) {
         platforms.push(
@@ -478,6 +550,7 @@ function loadLevel(levelNum) {
             { x: 345, y: 210, collected: false }, { x: 365, y: 210, collected: false }, { x: 385, y: 210, collected: false },
             { x: 525, y: 140, collected: false }, { x: 545, y: 140, collected: false }, { x: 565, y: 140, collected: false }
         );
+        healthPickups.push({ x: 685, y: 88, collected: false, kind: 'banana' });
         goalZone = { x: 700, y: 60, w: 40, h: 60 };
     } else if (levelNum === 3) {
         platforms.push(
@@ -493,6 +566,7 @@ function loadLevel(levelNum) {
             { x: 420, y: 160, collected: false }, { x: 440, y: 160, collected: false },
             { x: 570, y: 100, collected: false }, { x: 590, y: 100, collected: false }
         );
+        healthPickups.push({ x: 705, y: 58, collected: false, kind: 'banana' });
         goalZone = { x: 710, y: 30, w: 40, h: 60 };
     }
     document.getElementById('currentLevel').innerText = currentLevel;
@@ -630,7 +704,7 @@ function updatePhysics() {
             player.y < item.y + 16 && player.y + player.height > item.y) {
             item.collected = true;
             playerHealth = Math.min(MAX_HEALTH, playerHealth + HEALTH_BOOST);
-            document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
+            updateHealthUI();
         }
     });
 
@@ -654,7 +728,7 @@ function loseLife() {
     // one fall with no landing to measure, so it costs the worst tier
     // outright rather than going through applyFallDamage().
     playerHealth = Math.max(0, playerHealth - 3);
-    document.getElementById('healthFill').style.width = (playerHealth / MAX_HEALTH * 100) + '%';
+    updateHealthUI();
 
     if (playerHealth <= 0) {
         gameState = 'GAMEOVER';
@@ -743,10 +817,14 @@ function drawPlayer() {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw the city skyline backdrop (houses, buildings & mountains
-    // sliced from the tileset, composited into one background image).
-    if (sprites.bgCity.complete && sprites.bgCity.naturalWidth) {
-        ctx.drawImage(sprites.bgCity, 0, 0, canvas.width, canvas.height);
+    // Draw the city skyline backdrop. Level 1 uses the original
+    // composite; levels 2 and 3 keep the same sky and mountains but
+    // swap the buildings and trees.
+    const bg = currentLevel === 2 ? sprites.bgCity2
+        : currentLevel === 3 ? sprites.bgCity3
+        : sprites.bgCity;
+    if (bg && bg.complete && bg.naturalWidth) {
+        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
     } else {
         ctx.fillStyle = '#4a90e2';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -809,8 +887,9 @@ function render() {
 
     healthPickups.forEach(item => {
         if (!item.collected) {
-            if (sprites.health && sprites.health.complete && sprites.health.naturalWidth) {
-                ctx.drawImage(sprites.health, item.x - 4, item.y - 4, 24, 24);
+            const spr = (item.kind === 'banana') ? sprites.banana : sprites.health;
+            if (spr && spr.complete && spr.naturalWidth) {
+                ctx.drawImage(spr, item.x - 4, item.y - 4, 24, 24);
             } else {
                 ctx.fillStyle = '#ff8fa8';
                 ctx.beginPath();
@@ -828,26 +907,31 @@ function render() {
     drawPlayer();
 
     // Draw Overlays for Win / Game Over states
-    if (gameState === 'GAMEOVER') {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    if (gameState === 'GAMEOVER' || gameState === 'WIN') {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ff5252';
-        ctx.font = 'bold 36px Courier New';
+        const pan = sprites.panel;
+        if (pan && pan.complete && pan.naturalWidth) {
+            const pw = 280;
+            const ph = 200;
+            ctx.drawImage(pan, (canvas.width - pw) / 2, (canvas.height - ph) / 2 - 10, pw, ph);
+        }
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = '18px Courier New';
-        ctx.fillStyle = '#fff';
-        ctx.fillText('Refresh page to restart adventure', canvas.width / 2, canvas.height / 2 + 20);
-    } else if (gameState === 'WIN') {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#69f0ae';
-        ctx.font = 'bold 36px Courier New';
-        ctx.textAlign = 'center';
-        ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = '18px Courier New';
-        ctx.fillStyle = '#fff';
-        ctx.fillText('All 3 levels completed successfully!', canvas.width / 2, canvas.height / 2 + 20);
+        if (gameState === 'GAMEOVER') {
+            ctx.fillStyle = '#ff5252';
+            ctx.font = 'bold 32px Courier New';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 16);
+            ctx.font = '16px Courier New';
+            ctx.fillStyle = '#f4f0e6';
+            ctx.fillText('Refresh page to restart', canvas.width / 2, canvas.height / 2 + 18);
+        } else {
+            ctx.fillStyle = '#69f0ae';
+            ctx.font = 'bold 32px Courier New';
+            ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 16);
+            ctx.font = '16px Courier New';
+            ctx.fillStyle = '#f4f0e6';
+            ctx.fillText('All 3 levels complete', canvas.width / 2, canvas.height / 2 + 18);
+        }
     }
 }
 
@@ -859,6 +943,7 @@ function gameLoop() {
 
 // Initialize Level 1 and Start Loop
 loadLevel(1);
+updateHealthUI();
 gameLoop();
 </script>
 
