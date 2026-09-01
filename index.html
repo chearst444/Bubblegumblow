@@ -152,7 +152,7 @@
     </div>
     <div class="touch-controls">
         <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
-        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 TAP OR HOLD</button>
+        <button class="blow-btn" id="btnBlow" aria-label="Tap to blow, hold at full size">🫧 TAP TO BLOW</button>
         <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
     </div>
 </div>
@@ -217,19 +217,13 @@ const walkFramesR = ['walk_0_r', 'walk_1_r', 'walk_2_r', 'walk_3_r'];
 const idleFramesR = ['idle_0_r', 'idle_1_r', 'idle_2_r'];
 const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 
-// Balloon physics: purely stage-driven. Any bubbleStage > 0 floats
-// continuously at that stage's rate, whether the button is currently
-// held down or not - a tap locks in a stage and he keeps floating at
-// it until the next tap (or a landing, or a pop). blowFrames[bubbleStage]
-// is the matching sprite.
+// Balloon physics. Inflate is four taps, not a hold charge.
+// Tap 1: nothing. Tap 2: tiny bubble (blow_1) and he starts floating.
+// Tap 3: big bubble (blow_3). Tap 4: full (blow_4), keep holding to steer.
+// Let go at tap 4 to drop. Tap 5 pops.
 const MAX_BUBBLE_STAGE = 4;
-const BUBBLE_KICK = -3.0; // instant upward nudge applied on each successful tap
-// vy eases toward this rather than snapping to it, so a tap's kick
-// settles into a slow, steady float rather than a stepped jump. Floating
-// starts the moment he taps once (stage 1) and stays the same slow
-// speed at every stage after that - the bubble visibly grows tap by
-// tap, but the float itself doesn't speed up as it does.
-const HOVER_TARGET = [0, -0.3, -0.3, -0.3, -0.3];
+const BUBBLE_KICK = -3.0; // upward nudge on each grow tap (2, 3, 4)
+const HOVER_TARGET = [0, -0.25, -0.45, -0.65, -0.9];
 const HOVER_EASING = 0.05;
 
 // Fall damage: how far he drops (in px) from the highest point of an
@@ -263,7 +257,10 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.space = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+        keys.space = false;
+        releaseHold();
+    }
 });
 
 // On-screen touch controls (phones/tablets have no keyboard) - these
@@ -287,7 +284,7 @@ bindButton(document.getElementById('btnRight'),
 
 bindButton(document.getElementById('btnBlow'),
     () => { tapPump(); },
-    () => {});
+    () => { releaseHold(); });
 
 // Player Object
 const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
@@ -311,40 +308,77 @@ const player = {
 };
 player.peakY = player.y;
 
+// Counted taps for this blow cycle. 0 idle, 1 nothing, 2 tiny, 3 big,
+// 4 full (hold to steer), 5 popped.
+let pumpCount = 0;
+
 function tapPump() {
-    // Each tap locks in one more sprite stage and keeps him floating at
-    // it - not just while the button is down. The first tap already
-    // lifts him (stage 1); every stage after that floats faster (see
-    // HOVER_TARGET), and he stays floating there, steerable left/right,
-    // until the next tap, a landing, or over-inflating. A 5th tap - one
-    // past fully inflated - is what pops it.
-    if (player.bubbleStage === 0) {
-        if (!player.isGrounded) return; // can only start a bubble from the ground
-        player.bubbleStage = 1;
-    } else if (player.bubbleStage < MAX_BUBBLE_STAGE) {
-        player.bubbleStage++;
-    } else {
-        burstBubble(); // one tap past max - over-inflated, it bursts
+    if (gameState !== 'PLAYING') return;
+
+    // Fifth tap pops, even in the air after a drop from tap 4.
+    if (pumpCount >= 4) {
+        pumpCount = 5;
+        burstBubble();
         return;
     }
-    player.vy = BUBBLE_KICK;
+
+    // A new cycle can only begin on the ground.
+    if (pumpCount === 0 && !player.isGrounded) return;
+
+    pumpCount++;
+
+    if (pumpCount === 1) {
+        // First tap: nothing. No sprite, no lift.
+        return;
+    }
+
+    if (pumpCount === 2) {
+        // Tiny bubble. Start floating and keep floating after release.
+        player.bubbleStage = 1;
+        player.vy = BUBBLE_KICK;
+        return;
+    }
+
+    if (pumpCount === 3) {
+        // Big bubble. Still floating without holding.
+        player.bubbleStage = 3;
+        player.vy = BUBBLE_KICK;
+        return;
+    }
+
+    if (pumpCount === 4) {
+        // Full bubble. Keep this press held to steer.
+        player.bubbleStage = 4;
+        player.vy = BUBBLE_KICK;
+    }
+}
+
+function releaseHold() {
+    // Taps 1 to 3: letting go does not drop. He keeps floating after tap 2.
+    if (pumpCount < 4) return;
+    // Tap 4: let go of the hold to drop down. Not a pop.
+    if (pumpCount === 4 && player.bubbleStage > 0) {
+        dropFromHold();
+    }
+}
+
+function dropFromHold() {
+    player.bubbleStage = 0;
+    player.hardPop = true;
 }
 
 function burstBubble() {
-    // Popped - over-inflation or bonking a platform from below - and
-    // gravity takes over hard. Marks the next landing for fall damage
-    // scaled to how far that drop turns out to be.
+    // Popped from a fifth tap or from bonking a platform from below.
     player.bubbleStage = 0;
     player.hardPop = true;
     player.popFlashTimer = 10;
 }
 
 function softLand() {
-    // Floating into a landing (rather than popping first) deflates the
-    // bubble with no fall-damage consequence - a controlled touchdown,
-    // not a burst.
+    // Landed on a platform while a bubble was still up. Deflate and
+    // start a new tap cycle from the ground.
     player.bubbleStage = 0;
-    player.popFlashTimer = 10;
+    pumpCount = 0;
 }
 
 function applyFallDamage(distance) {
@@ -366,6 +400,7 @@ let goalZone = {};
 
 function loadLevel(levelNum) {
     currentLevel = levelNum;
+    pumpCount = 0;
     player.x = 50;
     player.y = GROUND_Y - player.height; // start standing on the ground, not mid-air
     player.vx = 0;
@@ -454,11 +489,8 @@ function updatePhysics() {
         player.animFrame++;
     }
 
-    // Vertical Physics: any bubbleStage > 0 floats continuously at that
-    // stage's rate, whether the button is currently held or not; stage 0
-    // is hard gravity (popped, over-inflated, bonked from below, or never
-    // blown). vy eases toward the target rather than snapping to it, so a
-    // tap's kick settles into a steady float instead of a stepped jump.
+    // Vertical physics: hover while a bubble is up. Taps 2 and 3 keep
+    // floating after release. Tap 4 only while the blow button is held.
     if (player.bubbleStage > 0) {
         player.vy += (HOVER_TARGET[player.bubbleStage] - player.vy) * HOVER_EASING;
     } else {
@@ -513,6 +545,7 @@ function updatePhysics() {
             player.hardPop = false;
         }
         if (player.bubbleStage > 0) softLand();
+        pumpCount = 0;
     }
     if (player.isGrounded) player.peakY = player.y;
 
@@ -558,6 +591,7 @@ function loseLife() {
         gameState = 'GAMEOVER';
     } else {
         // Reset position without penalty loss of level progress
+        pumpCount = 0;
         player.x = 50;
         player.y = GROUND_Y - player.height;
         player.vx = 0;
