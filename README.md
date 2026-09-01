@@ -25,10 +25,17 @@ Open `index.html` in a browser to play — no build step, no dependencies.
   marker.
 - `assets/bg_city.png` — a city skyline backdrop composited from pieces
   of the houses/buildings/trees/mountains tileset (distant mountains,
-  an apartment row, a hospital tower, a house, and trees), layered behind
-  a sky gradient.
+  an apartment row, a hospital tower, a house, and trees) standing on a
+  continuous green ground plane, layered behind a sky gradient. Mountains
+  and buildings are placed so every peak/base stays fully on-canvas and
+  flush with the ground — no clipped peaks, no gap of bare sky showing
+  above the ground line.
 - `assets/world_badge.png` — small decorative icon next to the level
   counter in the UI panel.
+- `assets/platform_tile.png` — a frost-topped candy tile strip sliced
+  from the "world 1 CAKES" sheet (the same sheet `world_badge.png` comes
+  from); tiled via `ctx.createPattern(..., 'repeat')` to texture every
+  floating platform instead of a flat gray rectangle.
 - `assets/player/*.png` — 13 frames sliced from the bubblegum-blowing boy
   character sheet: a 4-frame walk cycle, a 3-frame idle bob, a fall/jump
   pose, and 4 blow-up frames + a pop frame that map directly onto

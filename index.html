@@ -84,6 +84,8 @@ function loadSprite(name, src) {
 loadSprite('coin', 'assets/star_blue.png');
 loadSprite('goal', 'assets/star_gold.png');
 loadSprite('bgCity', 'assets/bg_city.png');
+loadSprite('platformTile', 'assets/platform_tile.png');
+let platformPattern = null; // built once the tile image is loaded (see render)
 
 // Player character frames. The art faces left by default; walking right
 // is drawn mirrored. blow_1..blow_4 line up with player.bubbleStage.
@@ -421,22 +423,37 @@ function render() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Draw Platforms (concrete rooftop ledges over a grassy street-level floor)
+    // Build the platform texture pattern once the tile art has loaded
+    if (!platformPattern && sprites.platformTile.complete && sprites.platformTile.naturalWidth) {
+        platformPattern = ctx.createPattern(sprites.platformTile, 'repeat');
+    }
+
+    // Draw Platforms: frost-topped candy tile ledges over a grassy
+    // street-level floor
     platforms.forEach(plat => {
         if (plat.type === 'ground') {
             const grad = ctx.createLinearGradient(0, plat.y, 0, plat.y + plat.h);
             grad.addColorStop(0, '#2e7d32');
             grad.addColorStop(1, '#1b5e20');
             ctx.fillStyle = grad;
+            ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+            ctx.strokeStyle = '#0d3d10';
+            ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+        } else if (platformPattern) {
+            ctx.fillStyle = platformPattern;
+            ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+            ctx.strokeStyle = '#5b57a3';
+            ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
         } else {
+            // Fallback while the tile image is still loading
             const grad = ctx.createLinearGradient(0, plat.y, 0, plat.y + plat.h);
             grad.addColorStop(0, '#b0bec5');
             grad.addColorStop(1, '#78909c');
             ctx.fillStyle = grad;
+            ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+            ctx.strokeStyle = '#546e7a';
+            ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
         }
-        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
-        ctx.strokeStyle = plat.type === 'ground' ? '#0d3d10' : '#546e7a';
-        ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
     });
 
     // Draw Goal (gold star marker)
