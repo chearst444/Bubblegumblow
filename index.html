@@ -217,21 +217,18 @@ const walkFramesR = ['walk_0_r', 'walk_1_r', 'walk_2_r', 'walk_3_r'];
 const idleFramesR = ['idle_0_r', 'idle_1_r', 'idle_2_r'];
 const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 
-// Balloon physics. blowFrames[bubbleStage] is the sprite; the physics
-// below reads player.holding rather than the stage itself, since the
-// same stage looks different depending on whether the button is
-// currently down.
+// Balloon physics: purely stage-driven. Any bubbleStage > 0 floats
+// continuously at that stage's rate, whether the button is currently
+// held down or not - a tap locks in a stage and he keeps floating at
+// it until the next tap (or a landing, or a pop). blowFrames[bubbleStage]
+// is the matching sprite.
 const MAX_BUBBLE_STAGE = 4;
-const BUBBLE_KICK = -3.0;      // instant upward nudge applied on each successful pump
-// While holding (no new tap), vy eases toward this rather than snapping -
-// a stage-scaled, gentle continued climb (steeper at higher stages) so a
-// sustained hold can still cross real vertical distance to a platform,
-// just at a controlled, non-rocket pace rather than the sharp per-tap kick.
-// Floating starts the moment he starts blowing (stage 1) and gets faster
-// every stage after that.
+const BUBBLE_KICK = -3.0; // instant upward nudge applied on each successful tap
+// vy eases toward this rather than snapping to it, so a tap's kick
+// settles into a slow, steady float rather than a stepped jump. Floating
+// starts the moment he taps once (stage 1) and gets faster each stage.
 const HOVER_TARGET = [0, -0.25, -0.45, -0.65, -0.9];
 const HOVER_EASING = 0.05;
-const INFLATE_TICK_MS = 250; // time to grow one stage while the button stays held
 
 // Fall damage: how far he drops (in px) from the highest point of an
 // airborne excursion to where he lands decides the tier. Distance-based
@@ -256,7 +253,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        if (!keys.space) startBlowing(); // fire once per press, not per repeat-fired keydown
+        if (!keys.space) tapPump(); // fire once per press, not per repeat-fired keydown
         keys.space = true;
     }
 });
@@ -264,16 +261,13 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        keys.space = false;
-        releaseHold();
-    }
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.space = false;
 });
 
 // On-screen touch controls (phones/tablets have no keyboard) - these
-// drive the exact same blow functions as the keyboard handlers above, so
-// all the physics/animation logic only has to exist once. Pointer events
-// cover touch, mouse, and stylus in one handler.
+// drive the exact same movement flags and tapPump() as the keyboard
+// handlers above, so all the physics/animation logic only has to exist
+// once. Pointer events cover touch, mouse, and stylus in one handler.
 function bindButton(el, onDown, onUp) {
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
     el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
@@ -290,8 +284,8 @@ bindButton(document.getElementById('btnRight'),
     () => { keys.right = false; });
 
 bindButton(document.getElementById('btnBlow'),
-    () => { startBlowing(); },
-    () => { releaseHold(); });
+    () => { tapPump(); },
+    () => {});
 
 // Player Object
 const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
@@ -305,9 +299,8 @@ const player = {
     speed: 3,
     gravity: 0.5,
     isGrounded: false,
-    bubbleStage: 0, // 0: None, 1-4: Progress
-    holding: false,  // button currently down with a bubble inflated - stable float
-    hardPop: false,  // popped (release, over-inflation, or a ceiling bump) - next landing takes fall damage
+    bubbleStage: 0, // 0: None, 1-4: Progress - any stage > 0 floats continuously at that stage's rate
+    hardPop: false,  // popped from over-inflation or a ceiling bump - next landing takes fall damage
     peakY: 0,        // highest point (min y) reached since he was last grounded
     facing: 'right', // starts facing into the level, toward the goal; updated from player.vx once he moves
     animFrame: 0,
@@ -316,70 +309,39 @@ const player = {
 };
 player.peakY = player.y;
 
-let inflationTimer = null;
-
-function startBlowing() {
-    // Press and hold: the moment he starts blowing, he starts floating -
-    // the first tap already gives a kick of lift at stage 1. Holding
-    // keeps growing the bubble one stage every INFLATE_TICK_MS, floating
-    // faster each stage (see HOVER_TARGET), and keeps him floating
-    // (steerable left/right) for as long as the button stays down. Once
-    // it reaches stage 4, holding still longer is what over-inflates it -
-    // the timer's next tick past max bursts it.
-    if (player.bubbleStage > 0) return; // already inflated - nothing to start
-    if (!player.isGrounded) return; // can only start a bubble from the ground
-
-    player.bubbleStage = 1;
-    player.holding = true;
-    player.vy = BUBBLE_KICK;
-    clearInterval(inflationTimer);
-    inflationTimer = setInterval(() => {
-        if (!player.holding) {
-            clearInterval(inflationTimer);
-            return;
-        }
-        if (player.bubbleStage < MAX_BUBBLE_STAGE) {
-            player.bubbleStage++;
-            player.vy = BUBBLE_KICK;
-        } else {
-            clearInterval(inflationTimer);
-            burstBubble(); // held past fully inflated - over-inflated, it bursts
-        }
-    }, INFLATE_TICK_MS);
-}
-
-function releaseHold() {
-    // Letting go pops it, same as over-inflating - he falls; no gentle
-    // drift. Grounded (stage 1, before floating starts) is the one case
-    // with nothing to fall from, so it just stops holding and deflates
-    // in place rather than "popping."
-    if (player.bubbleStage === 0) return;
-    player.holding = false;
-    if (player.isGrounded) {
-        player.bubbleStage = 0;
+function tapPump() {
+    // Each tap locks in one more sprite stage and keeps him floating at
+    // it - not just while the button is down. The first tap already
+    // lifts him (stage 1); every stage after that floats faster (see
+    // HOVER_TARGET), and he stays floating there, steerable left/right,
+    // until the next tap, a landing, or over-inflating. A 5th tap - one
+    // past fully inflated - is what pops it.
+    if (player.bubbleStage === 0) {
+        if (!player.isGrounded) return; // can only start a bubble from the ground
+        player.bubbleStage = 1;
+    } else if (player.bubbleStage < MAX_BUBBLE_STAGE) {
+        player.bubbleStage++;
+    } else {
+        burstBubble(); // one tap past max - over-inflated, it bursts
         return;
     }
-    burstBubble();
+    player.vy = BUBBLE_KICK;
 }
 
 function burstBubble() {
-    // Popped - whether from letting go, over-inflating, or bonking a
-    // platform from below - and gravity takes over. Marks the next
-    // landing for fall damage scaled to how far that drop turns out to be.
-    clearInterval(inflationTimer);
+    // Popped - over-inflation or bonking a platform from below - and
+    // gravity takes over hard. Marks the next landing for fall damage
+    // scaled to how far that drop turns out to be.
     player.bubbleStage = 0;
-    player.holding = false;
     player.hardPop = true;
     player.popFlashTimer = 10;
 }
 
 function softLand() {
-    // Touching down while still actively holding (e.g. resting at stage
-    // 1 with no lift) deflates the bubble with no fall-damage consequence
-    // - there's nothing to have fallen from.
-    clearInterval(inflationTimer);
+    // Floating into a landing (rather than popping first) deflates the
+    // bubble with no fall-damage consequence - a controlled touchdown,
+    // not a burst.
     player.bubbleStage = 0;
-    player.holding = false;
     player.popFlashTimer = 10;
 }
 
@@ -402,7 +364,6 @@ let goalZone = {};
 
 function loadLevel(levelNum) {
     currentLevel = levelNum;
-    clearInterval(inflationTimer);
     player.x = 50;
     player.y = GROUND_Y - player.height; // start standing on the ground, not mid-air
     player.vx = 0;
@@ -410,7 +371,6 @@ function loadLevel(levelNum) {
     player.isGrounded = true;
     player.facing = 'right'; // face into the new level
     player.bubbleStage = 0;
-    player.holding = false;
     player.hardPop = false;
     player.peakY = player.y;
     player.popFlashTimer = 0;
@@ -492,11 +452,12 @@ function updatePhysics() {
         player.animFrame++;
     }
 
-    // Vertical Physics: stable float while held, hard gravity the instant
-    // it isn't (popped, over-inflated, or bonked from below). vy eases
-    // toward the hold target rather than snapping to it, so a fresh pump's
-    // kick settles into a controlled climb instead of a stepped jump.
-    if (player.holding) {
+    // Vertical Physics: any bubbleStage > 0 floats continuously at that
+    // stage's rate, whether the button is currently held or not; stage 0
+    // is hard gravity (popped, over-inflated, bonked from below, or never
+    // blown). vy eases toward the target rather than snapping to it, so a
+    // tap's kick settles into a steady float instead of a stepped jump.
+    if (player.bubbleStage > 0) {
         player.vy += (HOVER_TARGET[player.bubbleStage] - player.vy) * HOVER_EASING;
     } else {
         player.vy += player.gravity;
@@ -595,7 +556,6 @@ function loseLife() {
         gameState = 'GAMEOVER';
     } else {
         // Reset position without penalty loss of level progress
-        clearInterval(inflationTimer);
         player.x = 50;
         player.y = GROUND_Y - player.height;
         player.vx = 0;
@@ -603,7 +563,6 @@ function loseLife() {
         player.isGrounded = true;
         player.facing = 'right';
         player.bubbleStage = 0;
-        player.holding = false;
         player.hardPop = false;
         player.peakY = player.y;
         player.popFlashTimer = 0;

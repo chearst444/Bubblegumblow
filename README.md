@@ -15,35 +15,33 @@ work identically to the keys below (the canvas also scales to fit the
 screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow** — tap to start inflating the bubble, then hold
-  to keep it inflating and floating:
-  - The moment he starts blowing, he starts floating - the first tap
-    already lifts him. Holding grows the bubble one of 4 sprite stages
-    roughly every quarter second, floating faster each stage, and keeps
-    him floating (steerable left/right the whole time) for as long as
-    you hold it - it won't rocket, but holding long enough gets you as
-    high as you need.
-  - **Releasing pops it - no gentle drift.** Gravity takes over hard, and
-    however far he falls before landing costs health (see below). Line
-    yourself up over a platform first, then let go to drop onto it.
-  - **Holding past fully inflated over-inflates it** - the same instant
-    pop and fall as releasing. Floating straight into the underside of a
-    platform bursts it the same way too.
+- **Space / W / Up arrow** — each tap (a full press-and-release, not a
+  hold) locks in one more of 4 sprite stages, and he keeps floating at
+  that stage indefinitely, whether you're pressing anything or not:
+  - The first tap already lifts him; every stage after that floats
+    faster. Once he's up there he just keeps climbing, slowly, on his
+    own, steerable left/right the whole time, until the next tap changes
+    his stage or something pops the bubble.
+  - **A 5th tap — one past fully inflated — over-inflates it.** It pops
+    instantly, gravity takes over hard, and however far he falls before
+    landing costs health (see below). Floating straight into the
+    underside of a platform bursts it the same way.
+  - Flying into a landing on a platform or the ground deflates the
+    bubble safely with no fall damage, whatever stage he was at.
 
 ### Health
 
 A health bar (starts full, 10 points) replaces a simple life count.
-Every pop — releasing, over-inflating, or bonking a platform from below
+Every pop — over-inflating (a 5th tap) or bonking a platform from below
 — costs health scaled to how far he fell from the highest point of that
 flight to where he landed: a little fall costs 1, a bigger one 2, and a
 fall from the highest platform costs 3. That's measured by distance
 rather than tied to any specific platform, so it scales to whatever a
 level's tallest platform happens to be, and a trivial drop (a few
-pixels) costs nothing. Letting go before he's ever left the ground is
-the one case with nothing to fall from, so it's free. Missing every
-platform and hitting the bottom of the screen is the one fall with
-nothing to measure, so it costs the worst tier outright. Health hits 0 →
-game over.
+pixels) costs nothing. Flying into a landing instead of popping first
+is always free, however far up he was. Missing every platform and
+hitting the bottom of the screen is the one fall with nothing to
+measure, so it costs the worst tier outright. Health hits 0 → game over.
 
 ## Assets
 
