@@ -15,34 +15,34 @@ work identically to the keys below (the canvas also scales to fit the
 screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow**:
-  - **Tap** — pumps the bubble up one of 4 sprite stages. Stage 1 is just
-    the bubble appearing, no lift yet - he stays put. Stage 2 onward each
-    tap gives a kick of lift, so floating actually starts at stage 2 and
-    gets faster through 3 and 4.
-  - **Hold** — keeps climbing at a stable, controlled rate (steeper at
-    higher stages, none at stage 1) so you can cross to a platform; it
+- **Space / W / Up arrow** — tap to start inflating the bubble, then hold
+  to keep it inflating and floating:
+  - Pressing grows the bubble one of 4 sprite stages roughly every
+    quarter second for as long as you hold it. Stage 1 is just the bubble
+    appearing - no lift yet, he stays put. Stage 2 onward, floating
+    actually starts and gets faster each stage.
+  - Holding at stage 4 keeps climbing at a stable, controlled rate - it
     won't rocket, but holding long enough gets you as high as you need,
     and you can still move left/right the whole time.
-  - **Release** — no instant pop. He keeps the bubble and sinks in a
-    slow, controlled drift until he lands somewhere safely, no health
-    lost either way.
-  - **Tap once more after it's already fully inflated** — over-inflates
-    it. It bursts outright, gravity takes over hard instead of the gentle
-    drift, and however far he falls before landing costs health (see
-    below). Floating straight into the underside of a platform bursts it
-    the same way.
+  - **Releasing pops it - no gentle drift.** Gravity takes over hard, and
+    however far he falls before landing costs health (see below). The
+    one exception is letting go before he's ever left the ground (stage
+    1) - nothing to fall from there, so it just deflates in place.
+  - **Holding past fully inflated over-inflates it** - the same instant
+    pop and fall as releasing. Floating straight into the underside of a
+    platform bursts it the same way too.
 
 ### Health
 
 A health bar (starts full, 10 points) replaces a simple life count.
-Landing after a *burst* (over-inflation, or bonking a platform from
-below) costs health scaled to how far he fell from the highest point of
-that flight to where he landed — a little fall costs 1, a bigger one 2,
-and a fall from the highest platform costs 3 — measured by distance
+Every pop — releasing, over-inflating, or bonking a platform from below
+— costs health scaled to how far he fell from the highest point of that
+flight to where he landed: a little fall costs 1, a bigger one 2, and a
+fall from the highest platform costs 3. That's measured by distance
 rather than tied to any specific platform, so it scales to whatever a
-level's tallest platform happens to be. Landing after a voluntary,
-*controlled* drift never costs health, however far it was. Missing every
+level's tallest platform happens to be, and a trivial drop (a few
+pixels) costs nothing. Letting go before he's ever left the ground is
+the one case with nothing to fall from, so it's free. Missing every
 platform and hitting the bottom of the screen is the one fall with
 nothing to measure, so it costs the worst tier outright. Health hits 0 →
 game over.
