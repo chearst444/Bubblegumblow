@@ -247,6 +247,9 @@ let gameState = 'PLAYING'; // PLAYING, GAMEOVER, WIN
 const keys = { right: false, left: false, up: false, space: false };
 
 window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowRight' || e.code === 'KeyD' || e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+        e.preventDefault();
+    }
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
@@ -269,10 +272,24 @@ window.addEventListener('keyup', (e) => {
 // handlers above, so all the physics/animation logic only has to exist
 // once. Pointer events cover touch, mouse, and stylus in one handler.
 function bindButton(el, onDown, onUp) {
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
-    el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
-    el.addEventListener('pointerleave', onUp);
-    el.addEventListener('pointercancel', onUp);
+    // Track each finger so hold (blow) and left/right can be down together.
+    // Do not use pointerleave: a second finger on another button would
+    // cancel the hold.
+    let heldId = null;
+    el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (heldId !== null) return;
+        heldId = e.pointerId;
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        onDown();
+    });
+    const end = (e) => {
+        if (e.pointerId !== heldId) return;
+        heldId = null;
+        onUp();
+    };
+    el.addEventListener('pointerup', (e) => { e.preventDefault(); end(e); });
+    el.addEventListener('pointercancel', end);
 }
 
 bindButton(document.getElementById('btnLeft'),
@@ -305,7 +322,9 @@ const player = {
     facing: 'right', // starts facing into the level, toward the goal; updated from player.vx once he moves
     animFrame: 0,
     animTimer: 0,
-    popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
+    popFlashTimer: 0, // brief "blow_pop" frame shown right as a bubble pops
+    leaking: false,   // hit the top of the screen, air leaking, slow drift down
+    leakTimer: 0
 };
 player.peakY = player.y;
 
@@ -368,6 +387,8 @@ function releaseHold() {
 function dropFromHold() {
     player.bubbleStage = 0;
     player.hardPop = true;
+    player.leaking = false;
+    player.leakTimer = 0;
 }
 
 function burstBubble() {
@@ -375,6 +396,8 @@ function burstBubble() {
     player.bubbleStage = 0;
     player.hardPop = true;
     player.popFlashTimer = 10;
+    player.leaking = false;
+    player.leakTimer = 0;
 }
 
 function softLand() {
@@ -382,6 +405,8 @@ function softLand() {
     // start a new tap cycle from the ground.
     player.bubbleStage = 0;
     pumpCount = 0;
+    player.leaking = false;
+    player.leakTimer = 0;
 }
 
 function applyFallDamage(distance) {
@@ -415,6 +440,8 @@ function loadLevel(levelNum) {
     player.hardPop = false;
     player.peakY = player.y;
     player.popFlashTimer = 0;
+    player.leaking = false;
+    player.leakTimer = 0;
 
     platforms = [
         { x: 0, y: 410, w: 800, h: 40, type: 'ground' } // Base ground / street level
@@ -498,7 +525,21 @@ function updatePhysics() {
 
     // Vertical physics: hover while a bubble is up. Taps 1 to 3 keep
     // floating after release. Tap 4 only while the blow button is held.
-    if (player.bubbleStage > 0) {
+    // Hold (space / TAP TO BLOW) and left/right work at the same time.
+    if (player.leaking && player.bubbleStage > 0) {
+        // Hit the top: leak air and drift down slowly. Not a pop.
+        player.vy += (0.28 - player.vy) * 0.06;
+        player.leakTimer++;
+        if (player.leakTimer >= 50) {
+            player.leakTimer = 0;
+            if (player.bubbleStage === 4) player.bubbleStage = 2;
+            else if (player.bubbleStage === 2) player.bubbleStage = 1;
+            else {
+                player.bubbleStage = 0;
+                player.leaking = false;
+            }
+        }
+    } else if (player.bubbleStage > 0) {
         player.vy += (HOVER_TARGET[player.bubbleStage] - player.vy) * HOVER_EASING;
     } else {
         player.vy += player.gravity;
@@ -507,6 +548,16 @@ function updatePhysics() {
     const wasGrounded = player.isGrounded;
     player.y += player.vy;
     player.isGrounded = false;
+
+    // Top of the screen: start a slow deflate, do not pop.
+    if (player.y < 6) {
+        player.y = 6;
+        if (player.vy < 0) player.vy = 0;
+        if (player.bubbleStage > 0 && !player.leaking) {
+            player.leaking = true;
+            player.leakTimer = 0;
+        }
+    }
 
     // Track the highest point (lowest y) reached since he was last
     // grounded, so a landing can tell how big a fall it was.
@@ -619,6 +670,8 @@ function loseLife() {
         player.hardPop = false;
         player.peakY = player.y;
         player.popFlashTimer = 0;
+        player.leaking = false;
+        player.leakTimer = 0;
     }
 }
 
