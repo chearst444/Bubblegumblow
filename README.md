@@ -15,13 +15,11 @@ work the same as the keys. The canvas also scales to fit the screen. On
 desktop:
 
 - **A / D** or **Left / Right arrows**: move
-- **Space / W / Up arrow**: tap to pump the bubble. Four taps inflate it.
-  - Tap 1: nothing. No bubble, no lift.
-  - Tap 2: tiny bubble sprite. He starts floating the moment you see it,
-    and keeps floating after you let go. Steer left and right the whole time.
-  - Tap 3: big bubble. Still floating without holding.
-  - Tap 4: full bubble, all the way blown up. Keep holding this press and
-    navigate him through the platforms.
+- **Space / W / Up arrow**: tap to pump the bubble.
+  - Tap 1: tiny bubble. He starts floating the moment you see it.
+  - Tap 2: a little bit bigger. Still floating after you let go.
+  - Tap 3: all the way blown up.
+  - Tap 4: keep holding this press and navigate him through the platforms.
   - Let go of that hold to drop down onto a platform.
   - Tap 5: the bubble pops. Same hard fall if you float into the underside
     of a platform.
