@@ -16,11 +16,14 @@ screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
 - **Space / W / Up arrow**:
-  - **Tap** — pumps the bubble up one of 4 sprite stages and gives it a
-    kick of lift, so a few quick taps get you off the ground.
-  - **Hold** — keeps the bubble at a stable, controlled climb (steeper at
-    higher stages) so you can cross to a platform; it won't rocket, but
-    holding long enough gets you as high as you need.
+  - **Tap** — pumps the bubble up one of 4 sprite stages. Stage 1 is just
+    the bubble appearing, no lift yet - he stays put. Stage 2 onward each
+    tap gives a kick of lift, so floating actually starts at stage 2 and
+    gets faster through 3 and 4.
+  - **Hold** — keeps climbing at a stable, controlled rate (steeper at
+    higher stages, none at stage 1) so you can cross to a platform; it
+    won't rocket, but holding long enough gets you as high as you need,
+    and you can still move left/right the whole time.
   - **Release** — no instant pop. He keeps the bubble and sinks in a
     slow, controlled drift until he lands somewhere safely, no health
     lost either way.

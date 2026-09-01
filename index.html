@@ -227,7 +227,9 @@ const BUBBLE_KICK = -3.0;      // instant upward nudge applied on each successfu
 // a stage-scaled, gentle continued climb (steeper at higher stages) so a
 // sustained hold can still cross real vertical distance to a platform,
 // just at a controlled, non-rocket pace rather than the sharp per-tap kick.
-const HOVER_TARGET = [0, -0.15, -0.35, -0.6, -0.9];
+// Stage 1 is just the visual start of the bubble - no lift yet. Floating
+// begins at stage 2, and gets faster each stage after that.
+const HOVER_TARGET = [0, 0, -0.35, -0.6, -0.9];
 const HOVER_EASING = 0.05;
 const DRIFT_TARGET = 0.6;    // while drifting (released): gentle, controlled sink speed
 const DRIFT_EASING = 0.04;
@@ -317,10 +319,12 @@ const player = {
 player.peakY = player.y;
 
 function tapPump() {
-    // Each tap pumps the bubble up one sprite stage and gives it a kick
-    // of lift - "rise higher into the air with each pump." Starting a
-    // bubble from nothing still needs solid ground under him; every pump
-    // after that (including re-grabbing it mid-drift) doesn't.
+    // Each tap pumps the bubble up one sprite stage. Stage 1 is just the
+    // bubble appearing - no lift, he stays put. Stage 2 onward each tap
+    // gives a kick of lift, so floating actually begins at stage 2 and
+    // gets stronger through 3 and 4 (see HOVER_TARGET). Starting a bubble
+    // from nothing needs solid ground under him; every pump after that
+    // (including re-grabbing it mid-drift) doesn't.
     if (player.bubbleStage === 0) {
         if (!player.isGrounded) return;
         player.bubbleStage = 1;
@@ -332,7 +336,7 @@ function tapPump() {
     }
     player.holding = true;
     player.drifting = false;
-    player.vy = BUBBLE_KICK;
+    if (player.bubbleStage >= 2) player.vy = BUBBLE_KICK;
 }
 
 function releaseHold() {
@@ -340,7 +344,13 @@ function releaseHold() {
     // bubble's current size and sinks slowly until he lands.
     if (player.bubbleStage === 0) return;
     player.holding = false;
-    player.drifting = true;
+    // Only start the drift if he's actually airborne. At stage 1 (no
+    // lift yet) he's still standing on the ground - starting a drift
+    // there would nudge him down into an immediate landing collision and
+    // deflate the bubble before a second tap ever got a chance to lift
+    // him. Staying grounded with the bubble just parked at its current
+    // stage is correct: the next tap picks up right where this left off.
+    if (!player.isGrounded) player.drifting = true;
 }
 
 function burstBubble() {
@@ -487,6 +497,7 @@ function updatePhysics() {
         player.vy += player.gravity;
     }
 
+    const wasGrounded = player.isGrounded;
     player.y += player.vy;
     player.isGrounded = false;
 
@@ -500,21 +511,18 @@ function updatePhysics() {
         if (!horizontalOverlap) return;
 
         if (
-            player.vy > 0 &&
-            player.y + player.height > plat.y &&
-            player.y + player.height - player.vy <= plat.y
+            player.vy >= 0 &&
+            player.y + player.height >= plat.y &&
+            player.y <= plat.y + plat.h
         ) {
-            // Landing on top
-            const fallDistance = (plat.y - player.height) - player.peakY;
+            // Resting on (or landing on) top of this platform. >= rather
+            // than a strict "crossed this frame" check, so a bubble
+            // hovering with exactly zero lift (stage 1, before floating
+            // actually starts) still reads as grounded every frame
+            // instead of only on the one frame it first touched down.
             player.y = plat.y - player.height;
             player.vy = 0;
             player.isGrounded = true;
-            if (player.hardPop) {
-                applyFallDamage(fallDistance);
-                player.hardPop = false;
-            }
-            if (player.bubbleStage > 0) softLand();
-            player.peakY = player.y;
         } else if (
             player.vy < 0 &&
             player.y < plat.y + plat.h &&
@@ -527,6 +535,18 @@ function updatePhysics() {
             if (player.bubbleStage > 0) burstBubble();
         }
     });
+
+    if (player.isGrounded && !wasGrounded) {
+        // Just touched down this frame - run landing side effects once,
+        // not on every subsequent frame spent simply resting there.
+        const fallDistance = player.y - player.peakY;
+        if (player.hardPop) {
+            applyFallDamage(fallDistance);
+            player.hardPop = false;
+        }
+        if (player.bubbleStage > 0) softLand();
+    }
+    if (player.isGrounded) player.peakY = player.y;
 
     // Fall below screen limit safety check
     if (player.y > canvas.height) {
