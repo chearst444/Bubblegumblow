@@ -8,8 +8,8 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 ## Controls
 
-You start standing on the ground; blow a bubble to float up to the
-platforms above rather than starting mid-air. On touch devices, on-screen
+You start standing on the ground, facing into the level; blow a bubble
+to float up to the platforms above rather than starting mid-air. On touch devices, on-screen
 ◀ / ▶ / HOLD TO BLOW buttons appear below the game and work identically
 to the keys below (the canvas also scales to fit the screen). On desktop:
 
@@ -53,21 +53,23 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
   (1–4). Both directions are real art, not a mirrored flip, so
   `drawPlayer()` just picks whichever set matches `player.facing` and
   draws it as-is. The no-suffix files are the character facing/walking
-  **right** and the `_r`-suffixed files face **left** (the suffix names
+  **left** and the `_r`-suffixed files face **right** (the suffix names
   which upload the frames came from, not which way they face - the
   second sheet was supplied as "him turning left" but turned out to be
-  the visual mirror of the first, so the two ended up facing opposite
-  to what their filenames suggest; confirmed by which side the backpack
-  sits on - the back, always opposite the facing direction - in a
-  screenshot of each). The single burst/pop frame (`blow_pop.png`) is
+  the visual mirror of the first). The mapping in `drawPlayer()` is the
+  single place that decides which set is shown for which travel
+  direction - confirmed correct by which side the backpack sits on (the
+  back, always opposite the facing direction) in a screenshot of him
+  walking each way. The single burst/pop frame (`blow_pop.png`) is
   shared by both directions - it's only shown for one instant, and no
   second version exists in the source sheets.
 
-  The second sheet's two largest blow-up frames were packed close
-  enough together in the source that a straight bounding-box crop
-  pulled a stray red sliver in from the neighboring frame; both were
-  re-cropped against the exact gap column between them to get clean,
-  artifact-free frames.
+  Both sheets' two largest blow-up frames were packed close enough
+  together in the source that a straight bounding-box crop pulled a
+  stray sliver in from the neighboring frame in each case (a fix
+  applied to the second sheet's frames initially missed the same issue
+  in the first sheet's `blow_4.png`/`blow_pop.png` - both are now
+  re-cropped against the exact gap column between the two frames).
 
 The underwater background sheets that were also supplied aren't used —
 this game is set over city rooftops, not underwater.

@@ -157,8 +157,8 @@ loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
 
 // Player character frames - real dedicated art for each facing direction,
-// no mirroring. Confusingly, the no-suffix files are him facing RIGHT and
-// the "_r" files face LEFT (the suffix names which upload they came from,
+// no mirroring. Confusingly, the no-suffix files are him facing LEFT and
+// the "_r" files face RIGHT (the suffix names which upload they came from,
 // not which way they face - see drawPlayer for the mapping). blow_1..
 // blow_4 line up with player.bubbleStage for whichever direction is active.
 loadSprite('walk_0', 'assets/player/walk_0.png');
@@ -277,7 +277,7 @@ const player = {
     isGrounded: false,
     bubbleStage: 0, // 0: None, 1-4: Progress
     isBlowing: false,
-    facing: 'left', // initial facing; updated from player.vx as soon as he moves
+    facing: 'right', // starts facing into the level, toward the goal; updated from player.vx once he moves
     animFrame: 0,
     animTimer: 0,
     popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
@@ -342,6 +342,7 @@ function loadLevel(levelNum) {
     player.vx = 0;
     player.vy = 0;
     player.isGrounded = true;
+    player.facing = 'right'; // face into the new level
     player.bubbleStage = 0;
     player.popFlashTimer = 0;
 
@@ -506,20 +507,22 @@ function loseLife() {
         player.vx = 0;
         player.vy = 0;
         player.isGrounded = true;
+        player.facing = 'right';
         player.bubbleStage = 0;
         player.popFlashTimer = 0;
     }
 }
 
 function drawPlayer() {
-    // Swapped from the first guess: he was walking backwards (facing the
-    // opposite way from his direction of travel), so the two sheets are
-    // mapped the other way round from before.
+    // Swapped back again - the previous mapping still read as reversed.
+    // See the loadSprite comment above for which physical sheet each key
+    // actually came from; this line is the only thing that decides which
+    // one is shown for which travel direction.
     const right = player.facing === 'right';
-    const walk = right ? walkFrames : walkFramesR;
-    const idle = right ? idleFrames : idleFramesR;
-    const blow = right ? blowFrames : blowFramesR;
-    const fall = right ? 'fall_0' : 'fall_0_r';
+    const walk = right ? walkFramesR : walkFrames;
+    const idle = right ? idleFramesR : idleFrames;
+    const blow = right ? blowFramesR : blowFrames;
+    const fall = right ? 'fall_0_r' : 'fall_0';
 
     // Pick the frame for the current state: popping > blowing > falling > walking > idle
     let key;
