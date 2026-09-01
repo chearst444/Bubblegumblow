@@ -71,8 +71,10 @@
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false; // keep the pixel art crisp when scaled
 
-// Sprite assets (sliced from the star/gem sheet + city tileset)
+// Sprite assets (sliced from the star/gem sheet, the city tileset, and
+// the bubblegum-blowing boy character sheet)
 const sprites = {};
 function loadSprite(name, src) {
     const img = new Image();
@@ -82,6 +84,26 @@ function loadSprite(name, src) {
 loadSprite('coin', 'assets/star_blue.png');
 loadSprite('goal', 'assets/star_gold.png');
 loadSprite('bgCity', 'assets/bg_city.png');
+
+// Player character frames. The art faces left by default; walking right
+// is drawn mirrored. blow_1..blow_4 line up with player.bubbleStage.
+loadSprite('walk_0', 'assets/player/walk_0.png');
+loadSprite('walk_1', 'assets/player/walk_1.png');
+loadSprite('walk_2', 'assets/player/walk_2.png');
+loadSprite('walk_3', 'assets/player/walk_3.png');
+loadSprite('idle_0', 'assets/player/idle_0.png');
+loadSprite('idle_1', 'assets/player/idle_1.png');
+loadSprite('idle_2', 'assets/player/idle_2.png');
+loadSprite('fall_0', 'assets/player/fall_0.png');
+loadSprite('blow_1', 'assets/player/blow_1.png');
+loadSprite('blow_2', 'assets/player/blow_2.png');
+loadSprite('blow_3', 'assets/player/blow_3.png');
+loadSprite('blow_4', 'assets/player/blow_4.png');
+loadSprite('blow_pop', 'assets/player/blow_pop.png');
+
+const walkFrames = ['walk_0', 'walk_1', 'walk_2', 'walk_3'];
+const idleFrames = ['idle_0', 'idle_1', 'idle_2'];
+const blowFrames = [null, 'blow_1', 'blow_2', 'blow_3', 'blow_4']; // indexed by bubbleStage
 
 // Game State
 let currentLevel = 1;
@@ -123,7 +145,11 @@ const player = {
     isGrounded: false,
     bubbleStage: 0, // 0: None, 1-4: Progress
     isBlowing: false,
-    riseSpeed: -2.5
+    riseSpeed: -2.5,
+    facing: 'left', // matches the sprite sheet's default facing direction
+    animFrame: 0,
+    animTimer: 0,
+    popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
 };
 
 function triggerBubbleInflation() {
@@ -146,6 +172,7 @@ function popBubble() {
     if (player.bubbleStage > 0) {
         player.bubbleStage = 0;
         player.isBlowing = false;
+        player.popFlashTimer = 10; // frames to show the pop sprite
     }
 }
 
@@ -161,6 +188,7 @@ function loadLevel(levelNum) {
     player.vx = 0;
     player.vy = 0;
     player.bubbleStage = 0;
+    player.popFlashTimer = 0;
 
     platforms = [
         { x: 0, y: 410, w: 800, h: 40, type: 'ground' } // Base ground / reef floor
@@ -225,6 +253,19 @@ function updatePhysics() {
     // Boundary check X
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+    // Facing & walk/idle animation (the sprite sheet faces left by default)
+    if (player.vx > 0) player.facing = 'right';
+    else if (player.vx < 0) player.facing = 'left';
+
+    if (player.popFlashTimer > 0) player.popFlashTimer--;
+
+    player.animTimer++;
+    const animSpeed = player.vx !== 0 ? 8 : 18;
+    if (player.animTimer >= animSpeed) {
+        player.animTimer = 0;
+        player.animFrame++;
+    }
 
     // Vertical Physics (Bubble floating vs Gravity)
     if (player.bubbleStage === 4) {
@@ -304,7 +345,46 @@ function loseLife() {
         player.vx = 0;
         player.vy = 0;
         player.bubbleStage = 0;
+        player.popFlashTimer = 0;
     }
+}
+
+function drawPlayer() {
+    // Pick the frame for the current state: popping > blowing > falling > walking > idle
+    let key;
+    if (player.popFlashTimer > 0) {
+        key = 'blow_pop';
+    } else if (player.bubbleStage > 0) {
+        key = blowFrames[player.bubbleStage];
+    } else if (!player.isGrounded) {
+        key = 'fall_0';
+    } else if (player.vx !== 0) {
+        key = walkFrames[player.animFrame % walkFrames.length];
+    } else {
+        key = idleFrames[player.animFrame % idleFrames.length];
+    }
+
+    const img = sprites[key];
+    if (!img || !img.complete || !img.naturalWidth) return;
+
+    // Scale to a consistent on-screen height, anchored at the player's feet
+    // and horizontally centered on the collision box.
+    const targetHeight = 44;
+    const scale = targetHeight / img.naturalHeight;
+    const drawW = img.naturalWidth * scale;
+    const drawH = targetHeight;
+    const centerX = player.x + player.width / 2;
+    const feetY = player.y + player.height;
+
+    ctx.save();
+    if (player.facing === 'right') {
+        ctx.translate(centerX, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, -drawW / 2, feetY - drawH, drawW, drawH);
+    } else {
+        ctx.drawImage(img, centerX - drawW / 2, feetY - drawH, drawW, drawH);
+    }
+    ctx.restore();
 }
 
 function render() {
@@ -359,25 +439,8 @@ function render() {
         }
     });
 
-    // Draw Player Sprite (Pixel art simulation styled block representation)
-    ctx.fillStyle = '#1e88e5'; // Blue overalls shirt
-    ctx.fillRect(player.x, player.y + 8, player.width, player.height - 8);
-    ctx.fillStyle = '#d32f2f'; // Red hair/cap
-    ctx.fillRect(player.x + 6, player.y, 20, 10);
-
-    // Draw Bubble Animation Stages (1 to 4 scaling)
-    if (player.bubbleStage > 0) {
-        const bubbleRadii = [0, 8, 14, 20, 28];
-        const currentRadius = bubbleRadii[player.bubbleStage];
-
-        ctx.fillStyle = 'rgba(255, 82, 82, 0.6)';
-        ctx.strokeStyle = '#b71c1c';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(player.x + player.width / 2, player.y - currentRadius + 4, currentRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-    }
+    // Draw Player (bubblegum-blowing boy sprite sheet)
+    drawPlayer();
 
     // Draw Overlays for Win / Game Over states
     if (gameState === 'GAMEOVER') {

@@ -24,6 +24,12 @@ Open `index.html` in a browser to play — no build step, no dependencies.
   a sky gradient.
 - `assets/world_badge.png` — small decorative icon next to the level
   counter in the UI panel.
+- `assets/player/*.png` — 13 frames sliced from the bubblegum-blowing boy
+  character sheet: a 4-frame walk cycle, a 3-frame idle bob, a fall/jump
+  pose, and 4 blow-up frames + a pop frame that map directly onto
+  `player.bubbleStage` (1–4) so the character visibly blows and pops the
+  bubble instead of just growing a plain circle. The sheet faces left by
+  default; walking right is drawn mirrored.
 
 The underwater background sheets that were also supplied aren't used —
 this game is set over city rooftops, not underwater.
