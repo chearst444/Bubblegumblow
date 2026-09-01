@@ -132,7 +132,7 @@
     </div>
     <div class="touch-controls">
         <button class="move-btn" id="btnLeft" aria-label="Move left">◀</button>
-        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 TAP TO BLOW</button>
+        <button class="blow-btn" id="btnBlow" aria-label="Blow bubble">🫧 HOLD TO BLOW</button>
         <button class="move-btn" id="btnRight" aria-label="Move right">▶</button>
     </div>
 </div>
@@ -156,9 +156,11 @@ loadSprite('bgCity', 'assets/bg_city.png');
 loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
 
-// Player character frames - real dedicated art for each facing direction
-// (a "_r" suffix = the right-facing sheet), no mirroring. blow_1..blow_4
-// line up with player.bubbleStage for whichever direction is active.
+// Player character frames - real dedicated art for each facing direction,
+// no mirroring. Confusingly, the no-suffix files are him facing RIGHT and
+// the "_r" files face LEFT (the suffix names which upload they came from,
+// not which way they face - see drawPlayer for the mapping). blow_1..
+// blow_4 line up with player.bubbleStage for whichever direction is active.
 loadSprite('walk_0', 'assets/player/walk_0.png');
 loadSprite('walk_1', 'assets/player/walk_1.png');
 loadSprite('walk_2', 'assets/player/walk_2.png');
@@ -203,12 +205,13 @@ const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 const MAX_BUBBLE_STAGE = 4;
 // Target speeds only - vy eases toward these (see updatePhysics) rather
 // than snapping to them, and early stages barely lift at all so the
-// character doesn't take off the instant the button is pressed. Stage 4's
-// target is 0: once fully inflated he settles into a stable hover rather
-// than continuing to climb - that's what actually reads as "floating"
-// instead of "still rising."
-const bubbleLift = [0, -0.2, -0.5, -0.9, 0];
+// character doesn't take off the instant the button is pressed. Reaching
+// stage 4 doesn't stop the climb - he keeps floating upward for as long
+// as the button stays held, just at a gentle, capped speed rather than
+// still accelerating.
+const bubbleLift = [0, -0.2, -0.5, -0.9, -1.3];
 const BUBBLE_EASING = 0.06; // lower = softer, more gradual float
+const INFLATE_TICK_MS = 250; // time to grow one stage while the button is held
 
 // Game State
 let currentLevel = 1;
@@ -223,7 +226,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
-        if (!keys.space) tapBlow(); // fire once per press, not per repeat-fired keydown
+        if (!keys.space) startBlowing(); // fire once per press, not per repeat-fired keydown
         keys.space = true;
     }
 });
@@ -231,13 +234,16 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.space = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+        keys.space = false;
+        stopBlowing();
+    }
 });
 
 // On-screen touch controls (phones/tablets have no keyboard) - these
-// drive the exact same `keys` flags and blow function as the keyboard
-// handlers above, so all the physics/animation logic only has to exist
-// once. Pointer events cover touch, mouse, and stylus in one handler.
+// drive the exact same blow functions as the keyboard handlers above, so
+// all the physics/animation logic only has to exist once. Pointer events
+// cover touch, mouse, and stylus in one handler.
 function bindButton(el, onDown, onUp) {
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
     el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
@@ -254,8 +260,8 @@ bindButton(document.getElementById('btnRight'),
     () => { keys.right = false; });
 
 bindButton(document.getElementById('btnBlow'),
-    () => { tapBlow(); },
-    () => {});
+    () => { startBlowing(); },
+    () => { stopBlowing(); });
 
 // Player Object
 const GROUND_Y = 410; // top of the ground platform, kept in sync with loadLevel's ground rect
@@ -271,28 +277,49 @@ const player = {
     isGrounded: false,
     bubbleStage: 0, // 0: None, 1-4: Progress
     isBlowing: false,
-    facing: 'left', // matches the sprite sheet's default facing direction
+    facing: 'left', // initial facing; updated from player.vx as soon as he moves
     animFrame: 0,
     animTimer: 0,
     popFlashTimer: 0 // brief "blow_pop" frame shown right as a bubble pops
 };
 
-function tapBlow() {
-    // Tap-to-blow: each press grows the bubble by exactly one stage.
-    // Reaching MAX_BUBBLE_STAGE settles into a stable float (see
-    // bubbleLift) instead of popping or continuing to climb - the player
-    // can hang there, move around, and line up a landing. Tapping again
-    // while already at max is what over-inflates it and pops it; that's
-    // an intentional action now, not something that happens on its own.
-    if (player.bubbleStage === 0) {
-        if (!player.isGrounded) return; // can only start a bubble from the ground
-        player.bubbleStage = 1;
-        player.isBlowing = true;
-    } else if (player.bubbleStage < MAX_BUBBLE_STAGE) {
-        player.bubbleStage++;
-    } else {
-        popBubble(); // over-inflated by one tap too many - it bursts
+let inflationTimer = null;
+
+function startBlowing() {
+    // Press-and-hold: the bubble grows a stage every INFLATE_TICK_MS while
+    // held. Once it reaches MAX_BUBBLE_STAGE it stops growing but keeps
+    // giving lift (bubbleLift[MAX_BUBBLE_STAGE], applied every physics
+    // frame - see updatePhysics) for as long as the button stays down, so
+    // he keeps floating upward instead of just hanging there. Letting go
+    // pops it (see stopBlowing). A fresh press while somehow already
+    // inflated (e.g. a quick second tap that beat the release event) also
+    // pops it - "tap it again and it pops" - rather than starting a
+    // second bubble on top of the first.
+    if (player.bubbleStage > 0) {
+        popBubble();
+        return;
     }
+    if (!player.isGrounded) return; // can only start a bubble from the ground
+
+    player.bubbleStage = 1;
+    player.isBlowing = true;
+    clearInterval(inflationTimer);
+    inflationTimer = setInterval(() => {
+        if (!player.isBlowing) {
+            clearInterval(inflationTimer);
+            return;
+        }
+        if (player.bubbleStage < MAX_BUBBLE_STAGE) {
+            player.bubbleStage++;
+            if (player.bubbleStage === MAX_BUBBLE_STAGE) clearInterval(inflationTimer);
+        }
+    }, INFLATE_TICK_MS);
+}
+
+function stopBlowing() {
+    // Letting go pops the bubble, whether it was still inflating or
+    // already fully floating - hold it up there, then let go to come down.
+    popBubble();
 }
 
 function popBubble() {
@@ -485,11 +512,14 @@ function loseLife() {
 }
 
 function drawPlayer() {
+    // Swapped from the first guess: he was walking backwards (facing the
+    // opposite way from his direction of travel), so the two sheets are
+    // mapped the other way round from before.
     const right = player.facing === 'right';
-    const walk = right ? walkFramesR : walkFrames;
-    const idle = right ? idleFramesR : idleFrames;
-    const blow = right ? blowFramesR : blowFrames;
-    const fall = right ? 'fall_0_r' : 'fall_0';
+    const walk = right ? walkFrames : walkFramesR;
+    const idle = right ? idleFrames : idleFramesR;
+    const blow = right ? blowFrames : blowFramesR;
+    const fall = right ? 'fall_0' : 'fall_0_r';
 
     // Pick the frame for the current state: popping > blowing > falling > walking > idle
     let key;

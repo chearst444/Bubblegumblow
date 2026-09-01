@@ -10,21 +10,19 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 You start standing on the ground; blow a bubble to float up to the
 platforms above rather than starting mid-air. On touch devices, on-screen
-◀ / ▶ / TAP TO BLOW buttons appear below the game and work identically
+◀ / ▶ / HOLD TO BLOW buttons appear below the game and work identically
 to the keys below (the canvas also scales to fit the screen). On desktop:
 
 - **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow** (tap, don't hold) — each tap grows the bubble
-  by one of 4 stages. Vertical speed eases toward a target rather than
-  snapping to it, and the early stages barely lift at all, so tapping
-  once doesn't yank you off the ground. Once fully inflated (stage 4) he
-  settles into a stable hover instead of keeps climbing — a real float,
-  not just a fast rise — giving you time to drift over to a platform.
-  Tap once more while already at max and that's what over-inflates the
-  bubble and pops it. Popping (from over-inflation, or landing safely)
-  hands control back to gravity — falling isn't fatal by itself, only
-  missing every platform and hitting the bottom of the screen costs a
-  heart.
+- **Space / W / Up arrow** (hold) — the bubble grows a stage roughly
+  every quarter second while held, 4 stages total. Vertical speed eases
+  toward a target rather than snapping to it, and the early stages barely
+  lift at all, so pressing it doesn't yank you off the ground. Once fully
+  inflated (stage 4) he doesn't stop climbing — he keeps floating upward
+  at a gentle, steady speed for as long as you keep holding. Let go at
+  any point and the bubble pops, handing control back to gravity —
+  falling isn't fatal by itself, only missing every platform and hitting
+  the bottom of the screen costs a heart.
 
 ## Assets
 
@@ -49,21 +47,27 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
   so tiling it produced visible periodic gaps; every stripe/scallop period
   in this version divides the tile size evenly, so `ctx.createPattern(...,
   'repeat')` tiles it with zero seams at any platform width.
-- `assets/player/*.png` — 13 frames each from two character sheets: one
-  facing left (no suffix) and one facing right (`_r` suffix), covering a
-  4-frame walk cycle, a 3-frame idle bob, a fall/jump pose, and 4 blow-up
-  frames that map directly onto `player.bubbleStage` (1–4). Both
-  directions are real art, not a mirrored flip, so `drawPlayer()` just
-  picks whichever set matches `player.facing` and draws it as-is. The
-  single burst/pop frame (`blow_pop.png`) is shared by both directions -
-  it's only shown for one instant, and no right-facing version exists in
-  the source sheet.
+- `assets/player/*.png` — 13 frames each from two character sheets,
+  covering a 4-frame walk cycle, a 3-frame idle bob, a fall/jump pose,
+  and 4 blow-up frames that map directly onto `player.bubbleStage`
+  (1–4). Both directions are real art, not a mirrored flip, so
+  `drawPlayer()` just picks whichever set matches `player.facing` and
+  draws it as-is. The no-suffix files are the character facing/walking
+  **right** and the `_r`-suffixed files face **left** (the suffix names
+  which upload the frames came from, not which way they face - the
+  second sheet was supplied as "him turning left" but turned out to be
+  the visual mirror of the first, so the two ended up facing opposite
+  to what their filenames suggest; confirmed by which side the backpack
+  sits on - the back, always opposite the facing direction - in a
+  screenshot of each). The single burst/pop frame (`blow_pop.png`) is
+  shared by both directions - it's only shown for one instant, and no
+  second version exists in the source sheets.
 
-  The right-facing sheet's two largest blow-up frames were packed close
-  enough together in the source that a straight bounding-box crop pulled
-  a stray red sliver in from the neighboring frame; both were re-cropped
-  against the exact gap column between them to get clean, artifact-free
-  frames.
+  The second sheet's two largest blow-up frames were packed close
+  enough together in the source that a straight bounding-box crop
+  pulled a stray red sliver in from the neighboring frame; both were
+  re-cropped against the exact gap column between them to get clean,
+  artifact-free frames.
 
 The underwater background sheets that were also supplied aren't used —
 this game is set over city rooftops, not underwater.
