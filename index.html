@@ -222,9 +222,10 @@ const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 // Tap 1: tiny bubble, start floating. Tap 2: a bit bigger.
 // Tap 3: all the way. Tap 4: hold to steer. Let go to drop. Tap 5 pops.
 const MAX_BUBBLE_STAGE = 4;
-const BUBBLE_KICK = -1.4; // gentler lift on each grow tap
-const HOVER_TARGET = [0, -0.10, -0.12, -0.14, -0.16];
-const HOVER_EASING = 0.04;
+// Each blow lifts a little faster. Not a rocket, just a noticeable step.
+const BUBBLE_KICK = [0, -1.05, -1.45, -1.65, -1.85];
+const HOVER_TARGET = [0, -0.10, -0.20, -0.28, -0.36];
+const HOVER_EASING = 0.045;
 const HEALTH_BOOST = 3; // about a third of the 10 point bar
 
 // Fall damage: how far he drops (in px) from the highest point of an
@@ -348,30 +349,30 @@ function tapPump() {
     pumpCount++;
 
     if (pumpCount === 1) {
-        // Tiny bubble. Start floating the moment you see it.
+        // Tiny balloon you can see. Start floating the moment it appears.
         player.bubbleStage = 1;
-        player.vy = BUBBLE_KICK;
+        player.vy = BUBBLE_KICK[1];
         return;
     }
 
     if (pumpCount === 2) {
-        // A little bit bigger. Keep floating after release.
+        // A little bit bigger. Keep floating after release, a bit faster.
         player.bubbleStage = 2;
-        player.vy = BUBBLE_KICK;
+        player.vy = BUBBLE_KICK[2];
         return;
     }
 
     if (pumpCount === 3) {
         // All the way blown up. Still floating without holding.
         player.bubbleStage = 4;
-        player.vy = BUBBLE_KICK;
+        player.vy = BUBBLE_KICK[4];
         return;
     }
 
     if (pumpCount === 4) {
         // Hold this press to steer at full size.
         player.bubbleStage = 4;
-        player.vy = BUBBLE_KICK;
+        player.vy = BUBBLE_KICK[4];
     }
 }
 
@@ -689,7 +690,10 @@ function drawPlayer() {
     if (player.popFlashTimer > 0) {
         key = 'blow_pop'; // only drawn one way - see the loadSprite note above
     } else if (player.bubbleStage > 0) {
-        key = blow[player.bubbleStage];
+        // blow_1 and blow_2 are just him puffing. The first visible gum
+        // is blow_3, and the big balloon is blow_4. Taps 1 and 2 use
+        // blow_3 plus a drawn balloon so the gum actually shows.
+        key = player.bubbleStage >= 4 ? blow[4] : blow[3];
     } else if (!player.isGrounded) {
         key = fall;
     } else if (player.vx !== 0) {
@@ -711,6 +715,29 @@ function drawPlayer() {
     const feetY = player.y + player.height;
 
     ctx.drawImage(img, centerX - drawW / 2, feetY - drawH, drawW, drawH);
+
+    // Extra balloon on taps 1 and 2. The sprite gum is a few pixels and
+    // gets lost on a phone. Draw a round balloon at the mouth so you
+    // can actually see it grow before the full blow_4 frame.
+    if (player.bubbleStage === 1 || player.bubbleStage === 2) {
+        const r = player.bubbleStage === 1 ? 8 : 13;
+        const mouthX = right ? centerX + 10 : centerX - 10;
+        const mouthY = feetY - drawH + 14;
+        ctx.fillStyle = '#ff5a7a';
+        ctx.beginPath();
+        ctx.arc(mouthX, mouthY, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(mouthX + (right ? -r * 0.28 : r * 0.28), mouthY - r * 0.32, r * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c2185b';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(mouthX, mouthY, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+    }
 }
 
 function render() {
