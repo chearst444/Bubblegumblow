@@ -9,9 +9,14 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 ## Controls
 
 - **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow** (hold) — blow up a bubble; the bubble grows in
-  stages while held and lifts you upward once fully inflated. Release to
-  pop it and fall back under gravity.
+- **Space / W / Up arrow** (hold) — blow up a bubble in 4 stages; each
+  stage lifts you faster than the last (balloon-style progressive lift —
+  bigger bubble, faster float). Keep holding past the max stage and it
+  over-inflates and pops on its own. Release early to pop it voluntarily.
+  Either way, gravity takes back over and you glide down to the ground or
+  the nearest platform below — falling isn't fatal by itself, only
+  missing every platform and hitting the bottom of the screen costs a
+  heart.
 
 ## Assets
 
