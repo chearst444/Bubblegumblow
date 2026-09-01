@@ -8,37 +8,35 @@ Open `index.html` in a browser to play — no build step, no dependencies.
 
 ## Controls
 
-You start standing on the ground, facing into the level; blow a bubble to
-float up to the platforms above rather than starting mid-air. On touch
-devices, on-screen ◀ / ▶ / TAP OR HOLD buttons appear below the game and
-work identically to the keys below (the canvas also scales to fit the
-screen). On desktop:
+You start standing on the ground, facing into the level. Blow a bubble
+with four taps to float up to the platforms above. On touch devices,
+on screen left, TAP TO BLOW, and right buttons appear below the game and
+work the same as the keys. The canvas also scales to fit the screen. On
+desktop:
 
-- **A / D** or **Left / Right arrows** — move
-- **Space / W / Up arrow** — each tap (a full press-and-release, not a
-  hold) locks in one more of 4 sprite stages, and he keeps floating at
-  that stage indefinitely, whether you're pressing anything or not:
-  - The first tap already lifts him, and every stage after that floats
-    at the exact same slow speed — only the bubble's size changes as you
-    tap, not how fast he climbs. Once he's up there he just keeps
-    climbing, slowly, on his own, steerable left/right the whole time,
-    until the next tap changes his stage or something pops the bubble.
-  - **A 5th tap — one past fully inflated — over-inflates it.** It pops
-    instantly, gravity takes over hard, and however far he falls before
-    landing costs health (see below). Floating straight into the
-    underside of a platform bursts it the same way.
-  - Flying into a landing on a platform or the ground deflates the
-    bubble safely with no fall damage, whatever stage he was at.
+- **A / D** or **Left / Right arrows**: move
+- **Space / W / Up arrow**: tap to pump the bubble. Four taps inflate it.
+  - Tap 1: nothing. No bubble, no lift.
+  - Tap 2: tiny bubble sprite. He starts floating the moment you see it,
+    and keeps floating after you let go. Steer left and right the whole time.
+  - Tap 3: big bubble. Still floating without holding.
+  - Tap 4: full bubble, all the way blown up. Keep holding this press and
+    navigate him through the platforms.
+  - Let go of that hold to drop down onto a platform.
+  - Tap 5: the bubble pops. Same hard fall if you float into the underside
+    of a platform.
+  - Landing on a platform while a bubble is still up deflates it safely
+    with no fall damage.
 
 ### Health
 
 A health bar (starts full, 10 points) replaces a simple life count.
-Every pop — over-inflating (a 5th tap) or bonking a platform from below
-— costs health scaled to how far he fell from the highest point of that
-flight to where he landed: a little fall costs 1, a bigger one 2, and a
-fall from the highest platform costs 3. That's measured by distance
-rather than tied to any specific platform, so it scales to whatever a
-level's tallest platform happens to be, and a trivial drop (a few
+A pop (a 5th tap, or bonking a platform from below) or a drop from
+letting go at full size costs health scaled to how far he fell from the
+highest point of that flight to where he landed: a little fall costs 1, a
+bigger one 2, and a fall from the highest platform costs 3. That's
+measured by distance rather than tied to any specific platform, so it
+scales to whatever a level's tallest platform happens to be, and a trivial drop (a few
 pixels) costs nothing. Flying into a landing instead of popping first
 is always free, however far up he was. Missing every platform and
 hitting the bottom of the screen is the one fall with nothing to
