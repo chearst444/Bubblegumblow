@@ -20,9 +20,10 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
   lift at all, so pressing it doesn't yank you off the ground. Once fully
   inflated (stage 4) he doesn't stop climbing — he keeps floating upward
   at a gentle, steady speed for as long as you keep holding. Let go at
-  any point and the bubble pops, handing control back to gravity —
-  falling isn't fatal by itself, only missing every platform and hitting
-  the bottom of the screen costs a heart.
+  any point and the bubble pops, handing control back to gravity.
+  Floating straight into the underside of a platform pops it too, same
+  as letting go — falling isn't fatal by itself, only missing every
+  platform and hitting the bottom of the screen costs a heart.
 
 ## Assets
 

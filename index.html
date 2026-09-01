@@ -446,18 +446,29 @@ function updatePhysics() {
 
     // Platform Collisions
     platforms.forEach(plat => {
+        const horizontalOverlap = player.x < plat.x + plat.w && player.x + player.width > plat.x;
+        if (!horizontalOverlap) return;
+
         if (
-            player.x < plat.x + plat.w &&
-            player.x + player.width > plat.x &&
+            player.vy > 0 &&
             player.y + player.height > plat.y &&
             player.y + player.height - player.vy <= plat.y
         ) {
-            if (player.vy > 0) { // Landing on top
-                player.y = plat.y - player.height;
-                player.vy = 0;
-                player.isGrounded = true;
-                if (player.bubbleStage > 0) popBubble(); // Pop upon hitting ground safely
-            }
+            // Landing on top
+            player.y = plat.y - player.height;
+            player.vy = 0;
+            player.isGrounded = true;
+            if (player.bubbleStage > 0) popBubble(); // Pop upon hitting ground safely
+        } else if (
+            player.vy < 0 &&
+            player.y < plat.y + plat.h &&
+            player.y - player.vy >= plat.y + plat.h
+        ) {
+            // Bonked the underside of a platform while floating up - the
+            // bubble can't push through it, so it bursts and he drops.
+            player.y = plat.y + plat.h;
+            player.vy = 0;
+            if (player.bubbleStage > 0) popBubble();
         }
     });
 
