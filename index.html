@@ -156,8 +156,9 @@ loadSprite('bgCity', 'assets/bg_city.png');
 loadSprite('platformTile', 'assets/platform_tile.png');
 let platformPattern = null; // built once the tile image is loaded (see render)
 
-// Player character frames. The art faces left by default; walking right
-// is drawn mirrored. blow_1..blow_4 line up with player.bubbleStage.
+// Player character frames - real dedicated art for each facing direction
+// (a "_r" suffix = the right-facing sheet), no mirroring. blow_1..blow_4
+// line up with player.bubbleStage for whichever direction is active.
 loadSprite('walk_0', 'assets/player/walk_0.png');
 loadSprite('walk_1', 'assets/player/walk_1.png');
 loadSprite('walk_2', 'assets/player/walk_2.png');
@@ -172,9 +173,27 @@ loadSprite('blow_3', 'assets/player/blow_3.png');
 loadSprite('blow_4', 'assets/player/blow_4.png');
 loadSprite('blow_pop', 'assets/player/blow_pop.png');
 
+loadSprite('walk_0_r', 'assets/player/walk_0_r.png');
+loadSprite('walk_1_r', 'assets/player/walk_1_r.png');
+loadSprite('walk_2_r', 'assets/player/walk_2_r.png');
+loadSprite('walk_3_r', 'assets/player/walk_3_r.png');
+loadSprite('idle_0_r', 'assets/player/idle_0_r.png');
+loadSprite('idle_1_r', 'assets/player/idle_1_r.png');
+loadSprite('idle_2_r', 'assets/player/idle_2_r.png');
+loadSprite('fall_0_r', 'assets/player/fall_0_r.png');
+loadSprite('blow_1_r', 'assets/player/blow_1_r.png');
+loadSprite('blow_2_r', 'assets/player/blow_2_r.png');
+loadSprite('blow_3_r', 'assets/player/blow_3_r.png');
+loadSprite('blow_4_r', 'assets/player/blow_4_r.png');
+// no right-facing pop frame exists - the brief pop flash reuses the left
+// one for both directions, it's a one-instant burst effect either way
+
 const walkFrames = ['walk_0', 'walk_1', 'walk_2', 'walk_3'];
 const idleFrames = ['idle_0', 'idle_1', 'idle_2'];
 const blowFrames = [null, 'blow_1', 'blow_2', 'blow_3', 'blow_4']; // indexed by bubbleStage
+const walkFramesR = ['walk_0_r', 'walk_1_r', 'walk_2_r', 'walk_3_r'];
+const idleFramesR = ['idle_0_r', 'idle_1_r', 'idle_2_r'];
+const blowFramesR = [null, 'blow_1_r', 'blow_2_r', 'blow_3_r', 'blow_4_r'];
 
 // Balloon physics: one array, indexed by bubbleStage, is the single source
 // of truth for both the sprite frame (blowFrames above) and the upward
@@ -479,18 +498,24 @@ function loseLife() {
 }
 
 function drawPlayer() {
+    const right = player.facing === 'right';
+    const walk = right ? walkFramesR : walkFrames;
+    const idle = right ? idleFramesR : idleFrames;
+    const blow = right ? blowFramesR : blowFrames;
+    const fall = right ? 'fall_0_r' : 'fall_0';
+
     // Pick the frame for the current state: popping > blowing > falling > walking > idle
     let key;
     if (player.popFlashTimer > 0) {
-        key = 'blow_pop';
+        key = 'blow_pop'; // only drawn one way - see the loadSprite note above
     } else if (player.bubbleStage > 0) {
-        key = blowFrames[player.bubbleStage];
+        key = blow[player.bubbleStage];
     } else if (!player.isGrounded) {
-        key = 'fall_0';
+        key = fall;
     } else if (player.vx !== 0) {
-        key = walkFrames[player.animFrame % walkFrames.length];
+        key = walk[player.animFrame % walk.length];
     } else {
-        key = idleFrames[player.animFrame % idleFrames.length];
+        key = idle[player.animFrame % idle.length];
     }
 
     const img = sprites[key];
@@ -505,15 +530,7 @@ function drawPlayer() {
     const centerX = player.x + player.width / 2;
     const feetY = player.y + player.height;
 
-    ctx.save();
-    if (player.facing === 'right') {
-        ctx.translate(centerX, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, -drawW / 2, feetY - drawH, drawW, drawH);
-    } else {
-        ctx.drawImage(img, centerX - drawW / 2, feetY - drawH, drawW, drawH);
-    }
-    ctx.restore();
+    ctx.drawImage(img, centerX - drawW / 2, feetY - drawH, drawW, drawH);
 }
 
 function render() {

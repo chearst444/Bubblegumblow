@@ -49,12 +49,21 @@ to the keys below (the canvas also scales to fit the screen). On desktop:
   so tiling it produced visible periodic gaps; every stripe/scallop period
   in this version divides the tile size evenly, so `ctx.createPattern(...,
   'repeat')` tiles it with zero seams at any platform width.
-- `assets/player/*.png` — 13 frames sliced from the bubblegum-blowing boy
-  character sheet: a 4-frame walk cycle, a 3-frame idle bob, a fall/jump
-  pose, and 4 blow-up frames + a pop frame that map directly onto
-  `player.bubbleStage` (1–4) so the character visibly blows and pops the
-  bubble instead of just growing a plain circle. The sheet faces left by
-  default; walking right is drawn mirrored.
+- `assets/player/*.png` — 13 frames each from two character sheets: one
+  facing left (no suffix) and one facing right (`_r` suffix), covering a
+  4-frame walk cycle, a 3-frame idle bob, a fall/jump pose, and 4 blow-up
+  frames that map directly onto `player.bubbleStage` (1–4). Both
+  directions are real art, not a mirrored flip, so `drawPlayer()` just
+  picks whichever set matches `player.facing` and draws it as-is. The
+  single burst/pop frame (`blow_pop.png`) is shared by both directions -
+  it's only shown for one instant, and no right-facing version exists in
+  the source sheet.
+
+  The right-facing sheet's two largest blow-up frames were packed close
+  enough together in the source that a straight bounding-box crop pulled
+  a stray red sliver in from the neighboring frame; both were re-cropped
+  against the exact gap column between them to get clean, artifact-free
+  frames.
 
 The underwater background sheets that were also supplied aren't used —
 this game is set over city rooftops, not underwater.
