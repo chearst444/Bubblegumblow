@@ -37,10 +37,14 @@
             max-height: 96dvh;
             overflow: hidden;
         }
-        canvas {
-            display: block;
+        .canvas-wrap {
+            position: relative;
             flex: 1 1 auto;
             min-height: 0;
+            display: flex;
+        }
+        canvas {
+            display: block;
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -48,6 +52,37 @@
             background: linear-gradient(to bottom, #4a90e2, #87ceeb);
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+        }
+        .end-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 14%;
+            box-sizing: border-box;
+        }
+        .end-overlay[hidden] {
+            display: none;
+        }
+        .end-overlay-btn {
+            font-family: inherit;
+            font-weight: bold;
+            font-size: clamp(14px, 3.6vw, 18px);
+            letter-spacing: 0.5px;
+            color: #1a2430;
+            background: #69f0ae;
+            border: 3px solid #1a2430;
+            border-radius: 6px;
+            padding: 10px 22px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #2e7d32;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .end-overlay-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #2e7d32;
         }
         img {
             image-rendering: pixelated;
@@ -349,7 +384,12 @@
   </div>
 </div>
 <div id="game-container">
-    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+        <div class="end-overlay" id="endOverlay" hidden>
+            <button type="button" class="end-overlay-btn" id="btnRestart">Play again</button>
+        </div>
+    </div>
     <div class="ui-panel">
         <div class="badge hud-chip">
             <img class="badge-icon" src="assets/world_badge.png" alt="">
@@ -381,6 +421,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false; // keep the pixel art crisp when scaled
+
+const endOverlay = document.getElementById('endOverlay');
+const btnRestart = document.getElementById('btnRestart');
 
 // Sprite assets (sliced from the star/gem sheet, the city tileset, and
 // the bubblegum-blowing boy character sheet)
@@ -1078,6 +1121,7 @@ function render() {
 
     // Draw Overlays for Win / Game Over states
     if (gameState === 'GAMEOVER' || gameState === 'WIN') {
+        endOverlay.hidden = false;
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const pan = sprites.panel;
@@ -1093,7 +1137,7 @@ function render() {
             ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 16);
             ctx.font = '16px Courier New';
             ctx.fillStyle = '#f4f0e6';
-            ctx.fillText('Refresh page to restart', canvas.width / 2, canvas.height / 2 + 18);
+            ctx.fillText('Tap Play Again below', canvas.width / 2, canvas.height / 2 + 18);
         } else {
             ctx.fillStyle = '#69f0ae';
             ctx.font = 'bold 32px Courier New';
@@ -1102,6 +1146,8 @@ function render() {
             ctx.fillStyle = '#f4f0e6';
             ctx.fillText('All 3 levels complete', canvas.width / 2, canvas.height / 2 + 18);
         }
+    } else if (!endOverlay.hidden) {
+        endOverlay.hidden = true;
     }
 }
 
@@ -1110,6 +1156,18 @@ function gameLoop() {
     render();
     requestAnimationFrame(gameLoop);
 }
+
+// Restart from Win or Game Over: full reset back to level 1.
+function restart() {
+    scoreCoins = 0;
+    document.getElementById('coinCount').innerText = scoreCoins;
+    playerHealth = MAX_HEALTH;
+    updateHealthUI();
+    gameState = 'PLAYING';
+    endOverlay.hidden = true;
+    loadLevel(1);
+}
+btnRestart.addEventListener('click', restart);
 
 // Initialize Level 1 and Start Loop
 loadLevel(1);
